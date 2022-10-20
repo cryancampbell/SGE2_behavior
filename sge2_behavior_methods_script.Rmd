@@ -1,0 +1,36 @@
+---
+title: "sge2_behavior_methods_script.Rmd"
+output: html_document
+date: "2022-10-20"
+---
+
+```{r setup, include=FALSE}
+library(ggplot2)
+library(ggrepel)
+library(tidyverse)
+library(data.table)
+library(viridis)
+library(cowplot)
+library(grid)
+library(EloRating)
+
+workDir <- "~/Dropbox (Personal)/macaque/vaccine/"
+dataDir <- paste0(workDir,"data/")
+modelFolder <- paste0(workDir,"models/")
+outDir <- paste0(workDir,"output/")
+figDir <- paste0(workDir,"figures/")
+
+sampleDates <- read.table("~/Dropbox (Personal)/macaque/sge_behavior/samplingDatesForR.csv", sep = ",", header = T)
+sampleDatesP2 <- read.table(paste0("~/Dropbox (Personal)/macaque/sge_behavior/data/eventDatesPhase2.csv"), sep = ",", header = T)
+sampleDatesP2$group <- gsub(pattern = "NO", replacement = "", sampleDatesP2$group)
+```
+
+# Read Me
+This is final code to generate group-centered Agonisms Received Rate, Overall Grooming Rate, and Elo for SGE2 phases 1 & 2.
+This code will output behavioral values for all animals, for all 4 experiments (SGE2p1 Environmental Challenge, SGE2p1 Single Cell, SGE2p1 Vaccine, SGE2p2 Vaccine)
+It will also generate dataset specific numbers to include with a clear methods section (behavior_methods_text.txt)
+
+
+```{r cars}
+
+```
