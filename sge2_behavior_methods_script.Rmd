@@ -15,21 +15,585 @@ library(grid)
 library(EloRating)
 
 workDir <- getwd()
-dataDir <- paste0(workDir,"data/")
-outDir <- paste0(workDir,"output/")
-figDir <- paste0(workDir,"figures/")
+dataDir <- paste0(workDir,"/data/")
+outDir <- paste0(workDir,"/output/")
+figDir <- paste0(workDir,"/figures/")
+dir.create(dataDir)
+dir.create(outDir)
+dir.create(figDir)
 
-sampleDates <- read.table("~/Dropbox (Personal)/macaque/sge_behavior/samplingDatesForR.csv", sep = ",", header = T)
-sampleDatesP2 <- read.table(paste0("~/Dropbox (Personal)/macaque/sge_behavior/data/eventDatesPhase2.csv"), sep = ",", header = T)
-sampleDatesP2$group <- gsub(pattern = "NO", replacement = "", sampleDatesP2$group)
 ```
 
 # Read Me
 This is final code to generate group-centered Agonisms Received Rate, Overall Grooming Rate, and Elo for SGE2 phases 1 & 2.
 This code will output behavioral values for all animals, for all 4 experiments (SGE2p1 Environmental Challenge, SGE2p1 Single Cell, SGE2p1 Vaccine, SGE2p2 Vaccine)
-It will also generate dataset specific numbers to include with a clear methods section (behavior_methods_text.txt)
+It will also generate dataset-specific numbers to complete a clear methods section (behavior_methods_text.txt)
 
+# Gather Data
+```{r input data}
+#gather files
+sampleDates <- read.table(paste0(dataDir,"samplingDatesForR.csv"), sep = ",", header = T)
+sampleDatesP2 <- read.table(paste0(dataDir,"eventDatesPhase2.csv"), sep = ",", header = T)
+#replace NONSPF with NSPF to match phase 1
+sampleDatesP2$group <- gsub(pattern = "NO", replacement = "", sampleDatesP2$group)
+intro_all <- "https://github.com/ndsimons/sge.II.obs.analysis/raw/master/obs.data/intro_all_v3.txt"
+intro_all <- read.delim(intro_all)
+intro_all$ID <- gsub('77_06', 'mo', intro_all$ID)
+intro_all$ID <- gsub('Dj7', 'D2', intro_all$ID)
 
-```{r cars}
+load(url("https://github.com/ndsimons/sge.II.obs.analysis/blob/master/obs.data/all.obs.files.RData?raw=true"))
+SPF5_1$behavior <- gsub('e2', 'et', SPF5_1$behavior)
+NSPF4$behavior <- gsub('dj', 'd2', NSPF4$behavior)
 
+## add # of obs per individual to intros_all
+data_list <- list(NSPF1 = NSPF1, NSPF2 = NSPF2, NSPF3 = NSPF3, NSPF4 = NSPF4, NSPF5 = NSPF5,
+                  SPF1 = SPF1, SPF2 = SPF2, SPF3 = SPF3, SPF4 = SPF4, SPF5 = SPF5,
+                  NSPF1_1 = NSPF1_1, NSPF2_1 = NSPF2_1, NSPF3_1 = NSPF3_1, NSPF4_1 = NSPF4_1, NSPF5_1 = NSPF5_1,
+                  SPF1_1 = SPF1_1, SPF2_1 = SPF2_1, SPF3_1 = SPF3_1, SPF4_1 = SPF4_1, SPF5_1 = SPF5_1)
+
+#behavior functions
+load(url("https://github.com/ndsimons/sge.II.obs.analysis/blob/master/functions/behavior_functions.RData?raw=true"))
+
+convert.dom.git <- function(x) {
+  x<-cbind(x[,c(1,2)],matrix(nrow=nrow(x),ncol=3))
+  date=0
+  for (r in 1:nrow(x)) {
+  	if (substr(x[r,1],1,5)=="HDATE") date=substr(x[r,1],7,20)
+  	else if (substr(x[r,1],1,5)!="HDATE") {
+  	  b<-substr(x[r,1],3,4)
+  	  if (b%in%c("tn","tc","at","ch")) {
+  	    x[r,3]<-substr(x[r,1],1,2); 
+  	    x[r,4]<-substr(x[r,1],5,6)
+  	  } else if (b%in%c("gr","wd")) {
+  	      x[r,4]<-substr(x[r,1],1,2); 
+  	      x[r,3]<-substr(x[r,1],5,6)};
+  	  x[r,5]<-date
+  	}
+  }
+  x<-(x[-which(is.na(x[,2])),])
+  x<-(x[-which(is.na(x[,3])),])
+  rownames(x)<-NULL
+  x<-x[,c(2:5)]
+  colnames(x)<-c("Time","Winner","Loser","Date")
+  x<-x[,c(4,1:3)]
+  x[,1]<-as.Date(x[,1],"%m/%d/%Y")
+  return(x)
+}
+```
+
+# Calculate Behavior Metric, Full & Partial Phase Data
+
+sge.behavioralRateData.df.readme
+
+Column descriptions for files sge.I.behavioralRateData.df and sge.II.behavioralRateData.df
+
+ID = Individual ID
+group = Individual group
+phase = Phase
+elo = final elo - using all available behavioral data (this column is in sge.I.behavioralRateData.df only)
+groom.min = number of minutes spent in grooming
+agg.received.count = number of aggressive events received
+agg.given.count = number of aggressive events given
+no.obs = total number of 30 min observation periods
+raw.groom.rate = grooming minutes per hour; (groom.min/no.obs)*2
+raw.aggRec.rate = aggression events received per hour; (agg.received.count/no.obs)*2
+raw.aggGiven.rate = aggression events given per hour; (agg.given.count/no.obs)*2
+group.centered.groom.rate = within-group centered grooming rate; for each group: scale(raw.groom.rate, scale = F, center = T)
+group.centered.aggRec.rate = within-group centered agg received rate; for each group: scale(raw.aggRec.rate, scale = F, center = T)
+group.centered.aggGiven.rate = within-group centered agg given rate; for each group: scale(raw.aggGiven.rate, scale = F, center = T)
+group.centered.scaled.groom.rate = within-group centered and scaled grooming rate; for each group: scale(raw.groom.rate, scale = T, center = T)
+group.centered.scaled.aggRec.rate = within-group centered and scaled agg received rate; for each group: scale(raw.aggRec.rate, scale = T, center = T)
+group.centered.scaled.aggGiven.rate = within-group centered and scaled agg given rate; for each group: scale(raw.aggGiven.rate, scale = T, center = T)
+centered.groom.rate = centered grooming rate; scale(raw.groom.rate, scale = F)
+centered.aggRec.rate = centered agg received rate; scale(raw.aggRec.rate, scale = F)
+centered.aggGiven.rate = centered agg given rate; scale(raw.aggGiven.rate, scale = F)
+centered.scaled.groom.rate = centered and scaled grooming rate; scale(raw.groom.rate, scale = T, center = T)
+centered.scaled.aggRec.rate = centered and scaled agg received rate; scale(raw.aggRec.rate, scale = T, center = T)
+centered.scaled.aggGiven.rate = centered and scaled agg given rate; scale(raw.aggGiven.rate, scale = T, center = T)
+
+```{r calculated behavioral data from raw}
+### grooming, agonisms received, & elo
+
+#example values
+adjustData <- TRUE ### section in the code exists to drop data by date, but i haven't implemented that here
+samplingDate <- "SingleCell" #or Vax or EnvChall
+sgePhase <- 1
+
+# data frame of datasets to generate
+dataCombos <- cbind.data.frame(c(FALSE,FALSE,TRUE,TRUE,TRUE),
+                               c(1,2,1,1,1),
+                               c("","","SingleCell","Vax","EnvChall"))
+
+colnames(dataCombos) <- c("adjustData","sgePhase","samplingDate")
+
+r <- 1
+
+for (r in 1:dim(dataCombos)[1]) {
+  
+  adjustData <- dataCombos$adjustData[r]
+  samplingDate <- dataCombos$samplingDate[r]
+  sgePhase <- dataCombos$sgePhase[r]
+  
+  dateDF <- sampleDates[colnames(sampleDates) %in% c("animal","group",paste0("date",samplingDate))]
+  
+  #add two letter code to dateDF
+  #replace moonlight, drop leading "R", swap for uppers
+  dateDF$twoLetter <- gsub('77_06', 'mo', dateDF$animal)
+  dateDF$twoLetter <- gsub('^R', '', dateDF$twoLetter)
+  dateDF$twoLetter <- toupper(substr(dateDF$twoLetter, start = 1, stop = 2))
+  
+  #create an "_1" group column
+  dateDF$group_1 <- paste0(dateDF$group,"_1")
+  
+  #mass calc Elo - if TRUE calculate animal Elo for all groups together
+  massCalcElo <- FALSE
+  
+  if (sgePhase == 1) {
+    phase_data <- data_list[names(data_list) %in% 
+                              c("NSPF1_1","NSPF2_1","NSPF3_1","NSPF4_1","NSPF5_1",
+                                "SPF1_1","SPF2_1","SPF3_1","SPF4_1","SPF5_1")]
+    intro_phase <- subset(intro_all, phase == "SGE1")
+  } else {
+    phase_data <- data_list[names(data_list) %in% 
+                              c("NSPF1","NSPF2","NSPF3","NSPF4","NSPF5",
+                                "SPF1","SPF2","SPF3","SPF4","SPF5")]
+    intro_phase <- subset(intro_all, phase == "SGE2")
+  }
+
+  social <- lapply(phase_data,convert.soc)
+  dominance <- lapply(phase_data,convert.dom.git)
+  
+  ### This code allows for the dates to be modified, leaving out for now (10 Oct 2022)
+  
+  if ( adjustData == TRUE & sgePhase == 1 ) {
+    
+    dateDF$fracKept <- 0
+    g <- names(dominance)[2]
+    
+    for (g in names(dominance)) {
+      
+      d <- sort(unique(subset(dateDF, group_1 == g)[,3]))[1]
+      
+      fractionKept <- mean(social[which(names(social) == g)][[1]]$Date < d)
+      dataToKeep <- social[which(names(social) == g)][[1]]$Date < d
+      domToKeep <- dominance[which(names(dominance) == g)][[1]]$Date < d
+      
+      dateDF$fracKept[which(dateDF$group_1 == g)] <- fractionKept
+      
+      social[which(names(social) == g)][[1]] <- social[which(names(social) == g)][[1]][dataToKeep,]
+      dominance[which(names(dominance) == g)][[1]] <- dominance[which(names(dominance) == g)][[1]][domToKeep,]
+    }
+  }
+
+  groom <- lapply(social,function(x){x[which(x[,5]%in%c("GM","G-","ZZ")),]})
+  aggs <- prox <- lapply(social,function(x){x[which(x[,5]%in%c("TN","TC","AT","CH")),]})
+  agg.received <- lapply(aggs,function(x){aggregate(x[,4],by=list(x[,4]),length)})
+
+  if ( adjustData == TRUE & sgePhase == 1 ) {
+    dateDF$numObs <- 0
+    dateDF <- dateDF[order(dateDF$group),]
+    
+    for (g in names(dominance)) {
+      gIDs <- which(dateDF$group_1 == g)
+      
+      newObs <- length(unique(social[[which(names(social) == g)]]$Date))
+      
+      dateDF$numObs[gIDs] <- newObs
+    }
+    
+  } else {
+    dateDF <- dateDF[order(dateDF$group),]
+  }
+
+  group <- vector()
+  ID1 <- vector()
+  ID2 <- vector()
+  count <- 1
+
+  for (i in unique(intro_phase$group)) {
+    id1 <- unique(subset(intro_phase, group == i)$ID)
+    for (j in id1){
+      for (k in id1){
+        if (j != k){
+          ID1[count] <- j
+          ID2[count] <- k
+          group[count] <- i
+          count <- count + 1
+        }
+      }
+    }
+  }
+  
+  ## calculate grooming
+  groom.tot <- data.frame(matrix(ncol=17,nrow=length(ID1)))
+  groom.tot$X1 <- ID1
+  groom.tot$X2 <- ID2
+  groom.tot$X3 <- group
+  colnames(groom.tot) <- c("ID1","ID2","group","no.obs","bouts","ID1.groom",
+                           "ID2.groom","min","ID1.groom.min","ID2.groom.min",
+                           "ID1.rank","ID2.rank","ID1.ord.rank","ID2.ord.rank",
+                           "agg.bouts","ID1.agg","ID2.agg")
+  
+  # change IDs to short, uppercase IDs
+  groom.tot[,1] <- as.character(groom.tot[,1]); 
+  groom.tot[,2] <- as.character(groom.tot[,2]); 
+  groom.tot[,3] <- as.character(groom.tot[,3])
+  groom.tot$ID1 <- toupper(substr(groom.tot$ID1, 1,2))
+  groom.tot$ID2 <- toupper(substr(groom.tot$ID2, 1,2))
+  groom.tot$ID1 <- gsub('77','MO',groom.tot$ID1)
+  groom.tot$ID2 <- gsub('77','MO',groom.tot$ID2)
+  intro_phase$ID <- toupper((substr(intro_phase$ID, 1,2)))
+  
+  ##caclulate grooming bouts
+  for (id in 1:nrow(groom.tot)){
+    id1 <- groom.tot[id,"ID1"]; id2<-groom.tot[id,"ID2"]; 
+    g <- groom[[as.character(groom.tot[id,"group"])]]; 
+    b1=0;b2=0;grp<-groom.tot[id,"group"]
+    b1=sum(g[,5]=="GM"&g[,3]==id1 & g[,4]==id2)
+    b2=sum(g[,5]=="GM"&g[,4]==id1 & g[,3]==id2)
+    groom.tot[id,5]=b1+b2;groom.tot[id,6]=b1;groom.tot[id,7]=b2
+    groom.tot[id,4]=intro_phase[which(intro_phase[,"ID"]==id1&intro_phase$group==grp),"num.obs"]
+    groom.tot[id,"ID1.rank"]=intro_phase[which(intro_phase[,"ID"]==id1&intro_phase$group==grp),"elo"]
+    groom.tot[id,"ID2.rank"]=intro_phase[which(intro_phase[,"ID"]==id2&intro_phase$group==grp),"elo"]
+    groom.tot[id,"ID1.ord.rank"]=intro_phase[which(intro_phase[,"ID"]==id1&intro_phase$group==grp),"ordinal.rank"]
+    groom.tot[id,"ID2.ord.rank"]=intro_phase[which(intro_phase[,"ID"]==id2&intro_phase$group==grp),"ordinal.rank"]
+  }  
+  
+  ## calculate grooming times
+  groom.tot$ID1.groom.min <- NA
+  groom.tot$ID2.groom.min <- NA
+  groom.tot$min <- NA
+  
+  for (i in 1:nrow(groom.tot)){
+    id1 <- groom.tot[i,"ID1"]
+    id2 <- groom.tot[i,"ID2"]
+    t1=0
+    t2=0
+    g <- groom[[as.character(groom.tot[i,"group"])]]
+    if (id1%in%c(g[,3],g[,4])&id2%in%c(g[,3],g[,4])){
+      g<-g[which((g[,4]==id1 & g[,3]==id2 )|(g[,3]==id1 & g[,4]==id2)|g[,3]=="ZZ"),]
+      for (r in 1:nrow(g)){
+        if (g[r,5]=="GM" & g[r,3]==id1 & g[r,4]==id2) t1=t1+(g[r+1,2]-g[r,2])
+        if (g[r,5]=="GM" & g[r,4]==id1 & g[r,3]==id2) t2=t2+(g[r+1,2]-g[r,2])
+      }
+      groom.tot[i,"ID1.groom.min"]=t1
+      groom.tot[i,"ID2.groom.min"]=t2
+      groom.tot[i,"min"]=t1+t2}
+  }
+  rm(t1);rm(t2);rm(i);rm(id1);rm(id2);rm(r);rm(g)
+  
+  # add phase info
+  groom.tot$phase <- sgePhase
+  
+  tmp.minutes <- vector()
+  tmp.minutes.give <- vector()
+  tmp.minutes.receive <- vector()
+  tmp.names <- vector()
+  tmp.ranks <- vector()
+  tmp.obs <- vector()
+  tmp.group <- vector()
+  
+  for (i in unique(groom.tot$ID1)){
+    tmp <- subset(groom.tot, groom.tot$phase == sgePhase)
+    tmp2 <- sum(subset(tmp, tmp$ID1 == i)$min)
+    tmp3 <- sum(subset(tmp, tmp$ID1 == i)$ID1.groom.min)
+    tmp4 <- tmp2 - tmp3
+    tmp.minutes <- cbind(tmp.minutes,tmp2)
+    tmp.minutes.give <- cbind(tmp.minutes.give,tmp3)
+    tmp.minutes.receive <- cbind(tmp.minutes.receive,tmp4)
+    tmp.names <- cbind(tmp.names,i)
+    tmp.ranks <- cbind(tmp.ranks,subset(tmp, tmp$ID1 == i)$ID1.rank[1])
+    tmp.obs <- cbind(tmp.obs,subset(tmp, tmp$ID1 == i)$no.obs[1])
+    tmp.group <- cbind(tmp.group,subset(tmp, tmp$ID1 == i)$group[1])
+  }  
+  
+  sge.groom.rate.df <- as.data.frame(t(rbind(tmp.names,tmp.ranks,tmp.minutes,tmp.minutes.give,tmp.minutes.receive,tmp.obs,tmp.group)))
+  names(sge.groom.rate.df) <- c('ID','elo','min','min.give','min.receive','no.obs','group')
+  sge.groom.rate.df <- na.omit(sge.groom.rate.df)
+  sge.groom.rate.df$elo <- as.numeric(as.character(sge.groom.rate.df$elo))
+  sge.groom.rate.df$min <- as.numeric(as.character(sge.groom.rate.df$min))
+  sge.groom.rate.df$min.give <- as.numeric(as.character(sge.groom.rate.df$min.give))
+  sge.groom.rate.df$min.receive <- as.numeric(as.character(sge.groom.rate.df$min.receive))
+  sge.groom.rate.df$no.obs <- as.numeric(as.character(sge.groom.rate.df$no.obs))
+  sge.groom.rate.df$phase <- sgePhase
+  
+  ### Agonisms Received
+  agg <- vector()
+  name <- vector()
+  group <- vector()
+  
+  for (i in unique(intro_phase$group)){
+    tmp3 <- agg.received[[i]]$Group.1
+    tmp4 <- agg.received[[i]]$x
+    tmp5 <- rep(i,length(tmp3))
+    agg <- c(agg,tmp4)
+    name <- c(name,tmp3)
+    group <- c(group,tmp5)
+  }
+  
+  tmp <- as.data.frame(cbind(agg,name,group))
+  tmp <- tmp[!(tmp$name=="ZZ"),]
+  tmp$agg <- as.numeric(as.character(tmp$agg))
+  tmp$name <- toupper(tmp$name)
+  tmp$id.group <- paste(tmp$name,tmp$group, sep='_')
+  
+  intro_sub <- intro_phase
+  intro_sub$agg.received <- 0
+  intro_sub$id.group <- paste(intro_sub$ID,intro_sub$group, sep='_')
+  tmp <- subset(tmp, tmp$id.group %in% intro_sub$id.group)
+  intro_sub <- subset(intro_sub, intro_sub$id.group %in% tmp$id.group)
+  intro_sub <- intro_sub[match(tmp$id.group, intro_sub$id.group),]
+  intro_sub <- na.omit(intro_sub)
+  intro_sub$agg.received <- tmp$agg
+  
+  intro_phase$id.group <- paste(intro_phase$ID,intro_phase$group, sep='_')
+  tmp <- subset(intro_phase, !(intro_phase$id.group %in% intro_sub$id.group))
+  tmp$agg.received <- 0
+  intro_sub <- rbind.data.frame(intro_sub,tmp)
+  ####
+  
+  
+  ### Elo Function
+  intro_sub$eloID <- ""
+  intro_sub$calcElo <- 0
+  intro_sub$groupEloStab <- 0
+  
+  ### Repeat For Each Group
+  groupIDs <- names(dominance)
+  g <- groupIDs[2]
+  
+  if (massCalcElo == TRUE) {
+    domAll <- do.call(rbind.data.frame, dominance)
+    
+    domAll <- domAll[order(domAll$Date),]
+
+    #only distinct interactions
+    domAllElo <- subset(domAll, Winner != Loser)
+    elo <- elo.seq(domAllElo$Winner,domAllElo$Loser,domAllElo$Date)
+    eloVals <- extract_elo(elo)
+    names(eloVals) <- toupper(names(eloVals))
+    
+  } else {
+  
+    for (g in groupIDs) {
+      groupNum <- which(groupIDs == g)
+      groupDom <- as.data.frame(dominance[groupNum])
+      
+  
+      colnames(groupDom) <- c("Date","Time","Winner","Loser")
+      
+      groupDom <- groupDom[order(groupDom$Date),]
+      
+      #only distinct interactions
+      groupDomElo <- subset(groupDom, Winner != Loser)
+      elo <- elo.seq(groupDomElo$Winner,groupDomElo$Loser,groupDomElo$Date)
+      eloVals <- extract_elo(elo)
+      names(eloVals) <- toupper(names(eloVals))
+      
+      groupStab <- stab_elo(elo)
+      
+      intro_sub$groupEloStab[which(intro_sub$group == g)] <- groupStab
+      
+      for (i in names(eloVals)) {
+        eloNum <- which(names(eloVals) == i)
+        intro_sub$calcElo[which(intro_sub$ID == i)] <- eloVals[eloNum]
+        intro_sub$eloID[which(intro_sub$ID == i)] <- names(eloVals)[eloNum]
+      }
+    }
+  }
+  
+  ### Combine and Output Data
+  sge.behave.summary <- merge(intro_sub,
+                              sge.groom.rate.df, 
+                              by = "ID",
+                              suffixes = c(".agg",".groom"))
+  
+  
+  sge.behave.summary$rawGroomRate <- (sge.behave.summary$min / sge.behave.summary$num.obs ) * 2
+  sge.behave.summary$rawAggRecRate <- (sge.behave.summary$agg.received / sge.behave.summary$num.obs ) * 2
+  
+  
+  
+  ### drop DV / DVJ2
+  ###
+  ### here DV / DVJ2 is dropped from the group-centering process, NOT the calculation of all behaviors
+  ### so when another animal won an Elo bout against DV2J she still benefited
+  ### but that group's averages are different without the inclusion of DV2J
+  
+  sge.behave.summary <- subset(sge.behave.summary, ID != "DV")
+  
+  sge.behave.summary$groupcent_groom <- 0
+  sge.behave.summary$groupcent_agRec <- 0
+  sge.behave.summary$groupcent_elo <- 0
+  sge.behave.summary$group.gc <- ""
+  
+  behaveCols <- which(colnames(sge.behave.summary) %in% c("ID",
+                                                  "rawGroomRate",
+                                                  "rawAggRecRate",
+                                                  "calcElo"))
+  
+  #group center behavior rates
+  for (g in sort(unique(sge.behave.summary$group.agg))) {
+    print(g)
+    groupBehave <- subset(sge.behave.summary, group.agg == g)[,behaveCols]
+    
+    newGroom <- scale(groupBehave[,3], center = TRUE, scale = FALSE)
+    newAgRec <- scale(groupBehave[,4], center = TRUE, scale = FALSE)
+    newElo <- scale(groupBehave[,2], center = TRUE, scale = FALSE)
+    
+    groupBehave$groupcent_elo <- newElo
+    groupBehave$groupcent_groom <- newGroom
+    groupBehave$groupcent_agRec <- newAgRec
+    
+    for (i in groupBehave$ID) {
+      sge.behave.summary$group.gc[which(sge.behave.summary$ID == i)] <- g
+      
+      sge.behave.summary$groupcent_elo[which(sge.behave.summary$ID == i)] <- groupBehave$groupcent_elo[which(groupBehave$ID == i)]
+      sge.behave.summary$groupcent_groom[which(sge.behave.summary$ID == i)] <- groupBehave$groupcent_groom[which(groupBehave$ID == i)]
+      sge.behave.summary$groupcent_agRec[which(sge.behave.summary$ID == i)] <- groupBehave$groupcent_agRec[which(groupBehave$ID == i)]
+    }
+  }
+  
+  #add fraction kept to sge behave
+  if (adjustData == FALSE) {
+    sge.behave.summary$adjDate <- "WholePhase"
+  } else {
+    sge.behave.summary$adjDate <- samplingDate
+  }
+  sge.behave.summary$fractionKept <- 0
+  sge.behave.summary$animalID <- ""
+  
+  for (i in sge.behave.summary$ID) {
+    dfDateRow <- which(dateDF$twoLetter == i)
+    behaveRow <- which(sge.behave.summary$ID == i)
+    sge.behave.summary$animalID[behaveRow] <- dateDF$animal[dfDateRow]
+    if (adjustData == FALSE) {
+      sge.behave.summary$fractionKept[behaveRow] <- 1
+    } else {
+      sge.behave.summary$fractionKept[behaveRow] <- dateDF$fracKept[dfDateRow]
+    }
+  }
+  
+  
+  ## cut down columns to bare minimum
+  sge.behave.summary.full <- sge.behave.summary
+  sge.behave.summary <- sge.behave.summary[,colnames(sge.behave.summary) %in% c("ID",
+                                                                                "phase.agg",
+                                                                                "group.agg",
+                                                                                "rawGroomRate",
+                                                                                "rawAggRecRate",
+                                                                                "calcElo",
+                                                                                "groupcent_groom",
+                                                                                "groupcent_agRec",
+                                                                                "groupcent_elo",
+                                                                                "adjDate",
+                                                                                "fractionKept",
+                                                                                "animalID")]
+  
+  colnames(sge.behave.summary)[which(colnames(sge.behave.summary) == "phase.agg")] <- "phase"
+  colnames(sge.behave.summary)[which(colnames(sge.behave.summary) == "group.agg")] <- "group"
+  
+  
+  if ( adjustData == TRUE & sgePhase == 1 ) {
+    write.table(x = sge.behave.summary.full,
+                file = paste0(outDir,"sge2Behavior_phase1_adj",samplingDate,".txt"),
+                quote = FALSE, 
+                sep = ",")
+    write.table(x = sge.behave.summary,
+                file = paste0(outDir,"sge2Behavior_shortCols_phase1_adj",samplingDate,".txt"),
+                quote = FALSE, 
+                sep = ",")
+  } else {
+    write.table(x = sge.behave.summary.full,
+                file = paste0(outDir,"sge2Behavior_","phase",sgePhase,".txt"),
+                quote = FALSE, 
+                sep = ",")
+    write.table(x = sge.behave.summary,
+                file = paste0(outDir,"sge2Behavior_shortCols_phase",sgePhase,".txt"),
+                quote = FALSE, 
+                sep = ",")
+  }
+}
+```
+
+### Correlations between partial and full data
+
+```{r}
+
+sgePhase <- 1
+fullData <- read.table(file = paste0(outDir,"sge2Behavior_shortCols_phase",sgePhase,".txt"),
+                       sep = ",")
+
+groupByGroup <- data.frame()
+
+for (samplingDate in c("SingleCell","Vax","EnvChall")) {
+  partialData <- read.table(file = paste0(outDir,"sge2Behavior_shortCols_phase",sgePhase,"_adj",samplingDate,".txt"),
+                            sep = ",")
+  
+  compareData <- merge(fullData,
+                       partialData,
+                       by = "animalID", suffixes = c(".full",".part"))
+  
+  avgKept <- round(mean(compareData$fractionKept.part), digits = 2)
+  
+  eloCorr <- round(cor.test(x = compareData$groupcent_elo.full,
+                            y = compareData$groupcent_elo.part)$estimate, digits = 4)
+  
+  ggplot(data = compareData,
+         aes(x = groupcent_elo.full,
+             y = groupcent_elo.part)) +
+    geom_smooth(method = "lm", formula = "y~x", se = FALSE, lwd = .5, col = "black") +
+    geom_point(aes(col = group.part), size = 3) +
+    labs(col = "Group") +
+    ggtitle(paste0("Centered Elo: at ",samplingDate," v. Full - SGEII Phase ",sgePhase),
+            subtitle = paste0(avgKept," of Phase Obs. used | R = ", eloCorr))
+  
+  ggsave(paste0(figDir,samplingDate,"vFull_centElo_XYplot.png"),
+         width = 6, height = 4)
+
+  agrCorr <- round(cor.test(x = compareData$groupcent_agRec.full,
+                            y = compareData$groupcent_agRec.part)$estimate, digits = 4)
+  
+  ggplot(data = compareData,
+         aes(x = groupcent_agRec.full,
+             y = groupcent_agRec.part)) +
+    geom_smooth(method = "lm", formula = "y~x", se = FALSE, lwd = .5, col = "black") +
+    geom_point(aes(col = group.part), size = 3) +
+    labs(col = "Group") +
+    ggtitle(paste0("Centered AgRec: at ",samplingDate," v. Full - SGEII Phase ",sgePhase),
+            subtitle = paste0(avgKept," of Phase Obs. used | R = ", agrCorr))
+  
+  ggsave(paste0(figDir,samplingDate,"vFull_centAgRec_XYplot.png"),
+         width = 6, height = 4)
+
+  grmCorr <- round(cor.test(x = compareData$groupcent_groom.full,
+                            y = compareData$groupcent_groom.part)$estimate, digits = 4)
+  
+  ggplot(data = compareData,
+         aes(x = groupcent_groom.full,
+             y = groupcent_groom.part)) +
+    geom_smooth(method = "lm", formula = "y~x", se = FALSE, lwd = .5, col = "black") +
+    geom_point(aes(col = group.part), size = 3) +
+    labs(col = "Group") +
+    ggtitle(paste0("Centered Groom: at ",samplingDate," v. Full - SGEII Phase ",sgePhase),
+            subtitle = paste0(avgKept," of Phase Obs. used | R = ", grmCorr))
+  
+    ggsave(paste0(figDir,samplingDate,"vFull_centGroom_XYplot.png"),
+         width = 6, height = 4)
+
+    groupByGroup <- rbind.data.frame(groupByGroup,
+                                     unique(cbind.data.frame(compareData$fractionKept.part,compareData$group.part,compareData$adjDate.part)))
+}
+
+colnames(groupByGroup) <- c("obsKept","group","sampleDate")
+
+ggplot(data = groupByGroup,
+       aes(x = obsKept,
+           y = sampleDate)) +
+  geom_violin(col = "white") +
+  geom_jitter(aes(col = group), size = 3, width = 0, height = .1) +
+  xlim(c(0,1))
+
+ggsave(paste0(figDir,"groupByGroup_observations_by_samplingpoint.png"),
+         width = 6, height = 4)
 ```
