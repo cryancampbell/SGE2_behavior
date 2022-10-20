@@ -85,31 +85,40 @@ convert.dom.git <- function(x) {
 
 sge.behavioralRateData.df.readme
 
-Column descriptions for files sge.I.behavioralRateData.df and sge.II.behavioralRateData.df
+Column descriptions for:
+object = sge.behave.summary.full
+file = sge2Behavior_shortCols_phase<1/2>_adj<SingleCell/Vax/EnvChall>.txt
 
-ID = Individual ID
-group = Individual group
-phase = Phase
-elo = final elo - using all available behavioral data (this column is in sge.I.behavioralRateData.df only)
-groom.min = number of minutes spent in grooming
-agg.received.count = number of aggressive events received
-agg.given.count = number of aggressive events given
-no.obs = total number of 30 min observation periods
-raw.groom.rate = grooming minutes per hour; (groom.min/no.obs)*2
-raw.aggRec.rate = aggression events received per hour; (agg.received.count/no.obs)*2
-raw.aggGiven.rate = aggression events given per hour; (agg.given.count/no.obs)*2
-group.centered.groom.rate = within-group centered grooming rate; for each group: scale(raw.groom.rate, scale = F, center = T)
-group.centered.aggRec.rate = within-group centered agg received rate; for each group: scale(raw.aggRec.rate, scale = F, center = T)
-group.centered.aggGiven.rate = within-group centered agg given rate; for each group: scale(raw.aggGiven.rate, scale = F, center = T)
-group.centered.scaled.groom.rate = within-group centered and scaled grooming rate; for each group: scale(raw.groom.rate, scale = T, center = T)
-group.centered.scaled.aggRec.rate = within-group centered and scaled agg received rate; for each group: scale(raw.aggRec.rate, scale = T, center = T)
-group.centered.scaled.aggGiven.rate = within-group centered and scaled agg given rate; for each group: scale(raw.aggGiven.rate, scale = T, center = T)
-centered.groom.rate = centered grooming rate; scale(raw.groom.rate, scale = F)
-centered.aggRec.rate = centered agg received rate; scale(raw.aggRec.rate, scale = F)
-centered.aggGiven.rate = centered agg given rate; scale(raw.aggGiven.rate, scale = F)
-centered.scaled.groom.rate = centered and scaled grooming rate; scale(raw.groom.rate, scale = T, center = T)
-centered.scaled.aggRec.rate = centered and scaled agg received rate; scale(raw.aggRec.rate, scale = T, center = T)
-centered.scaled.aggGiven.rate = centered and scaled agg given rate; scale(raw.aggGiven.rate, scale = T, center = T)
+ID - Individual ID, two-letter code
+phase.agg - Phase of SGEII Experiment
+group.agg - Individual's Group
+intro.no - Order of introduction from intro_all
+elo.agg - final elo from intro_all
+num.obs - Total number of 30 min. observational period that the animal was recorded in
+ordinal.rank - rank from the elo in intro_all
+agg.received - count of agonisms received
+id.group - column of ID_group
+eloID - Individual two-letter ID
+calcElo - Elo calculated from specified subset of data (pre-sample collection)
+groupEloStab - group stability of calcElo
+elo.groom - Elo from intro_all
+min - minutes of grooming total
+min.give - minutes of grooming given
+min.receive - minutes of grooming received
+no.obs - Total number of 30 min. observational period that the animal was recorded in
+group.groom - Individual's Group
+phase.groom - Phase of SGEII Experiment
+rawGroomRate - grooming minutes per hour; (groom.min/no.obs)*2
+rawAggRecRate - aggression events received per hour; (agg.received.count/no.obs)*2
+calcOrdRank - ordinal rank from calcElo (from specified subset of data, pre-sample collection)
+groupcent_groom - within group centered grooming rate
+groupcent_agRec - within group centered rate of agonisms received
+groupcent_elo - within group cenetered Elo
+group.gc - Individual's Group
+adjDate - experiment that data was generated for
+fractionKept - fraction of full phase's observations used, fraction of observations taken before this experiment
+animalID - Full animal ID (R__##, e.g. RAi10 where two-letter is AI)
+experimentDate - date of sampling for this animal
 
 ```{r calculated behavioral data from raw}
 ### grooming, agonisms received, & elo
@@ -437,7 +446,7 @@ for (rowNum in 1:dim(dataCombos)[1]) {
     geom_smooth(method = "lm", formula = "y~x", se = FALSE, lwd = .5, col = "black") +
     geom_jitter(aes(col = group.agg), size = 3, height = .1, width = .1) +
     labs(col = "Group") +
-    xlab("Order of Introduction") + ylab("Ordinal Rank from Elo")
+    xlab("Order of Introduction") + ylab("Ordinal Rank from Elo") +
     ggtitle(paste0("Ordinal Rank v. Introduction Order, ",samplingDate," SGEII Phase ",sgePhase),
             subtitle = paste0("R = ",round(rIntroElo, digits = 3)))
   ggsave(paste0(figDir,samplingDate,"_EloRank_v_IntroOrder_XYplot.png"),
@@ -497,6 +506,13 @@ for (rowNum in 1:dim(dataCombos)[1]) {
     }
   }
   
+  #add experiment date
+  sge.behave.summary$experimentDate <- ""
+  anID <- sge.behave.summary$ID[14]
+  
+  for (anID in sge.behave.summary$ID) {
+    sge.behave.summary$experimentDate[which(sge.behave.summary$ID == anID)] <- subset(dateDF, twoLetter == anID)[,3]
+  }
   
   ## cut down columns to bare minimum
   sge.behave.summary.full <- sge.behave.summary
