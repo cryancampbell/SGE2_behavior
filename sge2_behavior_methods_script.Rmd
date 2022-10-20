@@ -14,9 +14,8 @@ library(cowplot)
 library(grid)
 library(EloRating)
 
-workDir <- "~/Dropbox (Personal)/macaque/vaccine/"
+workDir <- getwd()
 dataDir <- paste0(workDir,"data/")
-modelFolder <- paste0(workDir,"models/")
 outDir <- paste0(workDir,"output/")
 figDir <- paste0(workDir,"figures/")
 
