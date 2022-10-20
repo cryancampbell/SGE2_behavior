@@ -1,0 +1,6 @@
+SGEII Phase 1
+Sample Date: WholePhase
+animals = 49
+animals w/o DV2J = 48
+Ordinal Rank ~ Introduction Number: R = 0.520738019647484
+Ordinal Rank ~ Introduction Number: p = 0.00012514520689395

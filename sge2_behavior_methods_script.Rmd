@@ -36,6 +36,10 @@ sampleDates <- read.table(paste0(dataDir,"samplingDatesForR.csv"), sep = ",", he
 sampleDatesP2 <- read.table(paste0(dataDir,"eventDatesPhase2.csv"), sep = ",", header = T)
 #replace NONSPF with NSPF to match phase 1
 sampleDatesP2$group <- gsub(pattern = "NO", replacement = "", sampleDatesP2$group)
+#match event text in phase 2, vax -> Vax, envChall -> EnvChall
+sampleDatesP2$event <- gsub(gsub(sampleDatesP2$event, pattern = "vax", replacement = "Vax"), pattern = "envChall",replacement = "EnvChall")
+
+
 intro_all <- "https://github.com/ndsimons/sge.II.obs.analysis/raw/master/obs.data/intro_all_v3.txt"
 intro_all <- read.delim(intro_all)
 intro_all$ID <- gsub('77_06', 'mo', intro_all$ID)
@@ -127,17 +131,17 @@ experimentDate - date of sampling for this animal
 adjustData <- TRUE ### section in the code exists to drop data by date, but i haven't implemented that here
 samplingDate <- "SingleCell" #or Vax or EnvChall
 sgePhase <- 1
-rowNum <- 2
+rowNum <- 6
 
 # data frame of datasets to generate
-# dataCombos <- cbind.data.frame(c(FALSE,FALSE,TRUE,TRUE,TRUE),
-#                                c(1,2,1,1,1),
-#                                c("","","SingleCell","Vax","EnvChall"))
+dataCombos <- cbind.data.frame(c(FALSE,FALSE,TRUE,TRUE,TRUE,TRUE),
+                               c(1,2,1,1,1,2),
+                               c("","","SingleCell","Vax","EnvChall","Vax"))
 
 #Phase 1 ONLY
-dataCombos <- cbind.data.frame(c(FALSE,TRUE,TRUE,TRUE),
-                               c(1,1,1,1),
-                               c("","SingleCell","Vax","EnvChall"))
+#dataCombos <- cbind.data.frame(c(FALSE,TRUE,TRUE,TRUE),
+#                               c(1,1,1,1),
+#                               c("","SingleCell","Vax","EnvChall"))
 
 
 
@@ -145,12 +149,30 @@ colnames(dataCombos) <- c("adjustData","sgePhase","samplingDate")
 
 for (rowNum in 1:dim(dataCombos)[1]) {
   
-  print(rowNum)
+  #print(rowNum)
   adjustData <- dataCombos$adjustData[rowNum]
   samplingDate <- dataCombos$samplingDate[rowNum]
   sgePhase <- dataCombos$sgePhase[rowNum]
   
-  dateDF <- sampleDates[colnames(sampleDates) %in% c("animal","group",paste0("date",samplingDate))]
+  if (sgePhase == 1) {
+    dateDF <- sampleDates[colnames(sampleDates) %in% c("animal","group",paste0("date",samplingDate))]
+  } else {
+    dateDF <- subset(intro_all, phase == "SGE2")[,colnames(intro_all) %in% c("ID","group")]
+    colnames(dateDF)[which(colnames(dateDF) == "ID")] <- "animal"
+    
+    if (adjustData) {
+      sampleDatesP2event <- subset(sampleDatesP2, event == samplingDate)
+      groupDateDF <- sampleDatesP2event[colnames(sampleDatesP2event) %in% c("group","date")]
+      
+      dateDF$date <- ""
+      
+      for (g in unique(dateDF$group)) {
+        dateDF$date[which(dateDF$group == g)] <- subset(groupDateDF, group == g)$date
+      }
+      
+      colnames(dateDF)[which(colnames(dateDF) == "date")] <- paste0("date",samplingDate)
+    }
+  }
   
   #add two letter code to dateDF
   #replace moonlight, drop leading "R", swap for uppers
@@ -181,20 +203,28 @@ for (rowNum in 1:dim(dataCombos)[1]) {
   
   ### This code allows for the dates to be modified, leaving out for now (10 Oct 2022)
   
-  if ( adjustData == TRUE & sgePhase == 1 ) {
+  if ( adjustData == TRUE) {
     
     dateDF$fracKept <- 0
     g <- names(dominance)[2]
     
     for (g in names(dominance)) {
       
-      d <- sort(unique(subset(dateDF, group_1 == g)[,3]))[1]
+      if (sgePhase == 1) {
+        d <- sort(unique(subset(dateDF, group_1 == g)[,3]))[1]
+      } else {
+        d <- sort(unique(subset(dateDF, group == g)[,3]))[1]
+      }
       
       fractionKept <- mean(social[which(names(social) == g)][[1]]$Date < d)
       dataToKeep <- social[which(names(social) == g)][[1]]$Date < d
       domToKeep <- dominance[which(names(dominance) == g)][[1]]$Date < d
       
-      dateDF$fracKept[which(dateDF$group_1 == g)] <- fractionKept
+      if (sgePhase == 1) {
+        dateDF$fracKept[which(dateDF$group_1 == g)] <- fractionKept
+      } else {
+        dateDF$fracKept[which(dateDF$group == g)] <- fractionKept
+      }
       
       social[which(names(social) == g)][[1]] <- social[which(names(social) == g)][[1]][dataToKeep,]
       dominance[which(names(dominance) == g)][[1]] <- dominance[which(names(dominance) == g)][[1]][domToKeep,]
@@ -205,12 +235,16 @@ for (rowNum in 1:dim(dataCombos)[1]) {
   aggs <- prox <- lapply(social,function(x){x[which(x[,5]%in%c("TN","TC","AT","CH")),]})
   agg.received <- lapply(aggs,function(x){aggregate(x[,4],by=list(x[,4]),length)})
 
-  if ( adjustData == TRUE & sgePhase == 1 ) {
+  if ( adjustData == TRUE ) {
     dateDF$numObs <- 0
     dateDF <- dateDF[order(dateDF$group),]
     
     for (g in names(dominance)) {
-      gIDs <- which(dateDF$group_1 == g)
+      if (sgePhase == 1) {
+        gIDs <- which(dateDF$group_1 == g)
+      } else {
+        gIDs <- which(dateDF$group == g)
+      }
       
       newObs <- length(unique(social[[which(names(social) == g)]]$Date))
       
@@ -435,6 +469,10 @@ for (rowNum in 1:dim(dataCombos)[1]) {
     sge.behave.summary$calcOrdRank[which(sge.behave.summary$group.agg == g)] <- groupOrdRank
   }
   
+  if (adjustData == FALSE) {
+    samplingDate <- "WholePhase"
+  }
+  
   # R of order of intro ~ order of Elo
   rIntroElo <- cor.test(sge.behave.summary$calcOrdRank, sge.behave.summary$intro.no)$estimate
   # p of order of intro ~ order of Elo
@@ -449,7 +487,7 @@ for (rowNum in 1:dim(dataCombos)[1]) {
     xlab("Order of Introduction") + ylab("Ordinal Rank from Elo") +
     ggtitle(paste0("Ordinal Rank v. Introduction Order, ",samplingDate," SGEII Phase ",sgePhase),
             subtitle = paste0("R = ",round(rIntroElo, digits = 3)))
-  ggsave(paste0(figDir,samplingDate,"_EloRank_v_IntroOrder_XYplot.png"),
+  ggsave(paste0(figDir,"sge2phase",sgePhase,"_",samplingDate,"_EloRank_v_IntroOrder_XYplot.png"),
          width = 6, height = 4)
   
   sge.behave.summary <- subset(sge.behave.summary, ID != "DV")
@@ -466,7 +504,7 @@ for (rowNum in 1:dim(dataCombos)[1]) {
   
   #group center behavior rates
   for (g in sort(unique(sge.behave.summary$group.agg))) {
-    print(g)
+    #print(g)
     groupBehave <- subset(sge.behave.summary, group.agg == g)[,behaveCols]
     
     newGroom <- scale(groupBehave[,3], center = TRUE, scale = FALSE)
@@ -487,31 +525,33 @@ for (rowNum in 1:dim(dataCombos)[1]) {
   }
   
   #add fraction kept to sge behave
-  if (adjustData == FALSE) {
-    sge.behave.summary$adjDate <- "WholePhase"
-  } else {
-    sge.behave.summary$adjDate <- samplingDate
-  }
-  sge.behave.summary$fractionKept <- 0
+  sge.behave.summary$adjDate <- samplingDate
+  
+  sge.behave.summary$fractionKept <- NA
   sge.behave.summary$animalID <- ""
   
   for (i in sge.behave.summary$ID) {
-    dfDateRow <- which(dateDF$twoLetter == i)
-    behaveRow <- which(sge.behave.summary$ID == i)
-    sge.behave.summary$animalID[behaveRow] <- dateDF$animal[dfDateRow]
-    if (adjustData == FALSE) {
-      sge.behave.summary$fractionKept[behaveRow] <- 1
-    } else {
-      sge.behave.summary$fractionKept[behaveRow] <- dateDF$fracKept[dfDateRow]
+    if (i %in% dateDF$twoLetter) {
+      dfDateRow <- which(dateDF$twoLetter == i)
+      behaveRow <- which(sge.behave.summary$ID == i)
+      sge.behave.summary$animalID[behaveRow] <- dateDF$animal[dfDateRow]
+      if (adjustData == FALSE) {
+        sge.behave.summary$fractionKept[behaveRow] <- 1
+      } else {
+        sge.behave.summary$fractionKept[behaveRow] <- dateDF$fracKept[dfDateRow]
+      }
     }
   }
   
   #add experiment date
-  sge.behave.summary$experimentDate <- ""
-  anID <- sge.behave.summary$ID[14]
+  sge.behave.summary$experimentDate <- NA
   
-  for (anID in sge.behave.summary$ID) {
-    sge.behave.summary$experimentDate[which(sge.behave.summary$ID == anID)] <- subset(dateDF, twoLetter == anID)[,3]
+  if (adjustData) {
+    for (anID in sge.behave.summary$ID) {
+      if (anID %in% dateDF$twoLetter) {
+        sge.behave.summary$experimentDate[which(sge.behave.summary$ID == anID)] <- subset(dateDF, twoLetter == anID)[,3]
+      }
+    }
   }
   
   ## cut down columns to bare minimum
@@ -527,7 +567,8 @@ for (rowNum in 1:dim(dataCombos)[1]) {
                                                                                 "groupcent_elo",
                                                                                 "adjDate",
                                                                                 "fractionKept",
-                                                                                "animalID")]
+                                                                                "animalID",
+                                                                                "experimentDate")]
   
   colnames(sge.behave.summary)[which(colnames(sge.behave.summary) == "phase.agg")] <- "phase"
   colnames(sge.behave.summary)[which(colnames(sge.behave.summary) == "group.agg")] <- "group"
@@ -550,45 +591,23 @@ for (rowNum in 1:dim(dataCombos)[1]) {
   numAnimalsNoDV2J <- length(unique(sge.behave.summary.full$animalID))
   
   
-
-  if ( adjustData == TRUE & sgePhase == 1 ) {
-    write.table(x = sge.behave.summary.full,
-                file = paste0(outDir,"sge2Behavior_phase1_adj",samplingDate,".txt"),
-                quote = FALSE, 
-                sep = ",")
-    write.table(x = sge.behave.summary,
-                file = paste0(outDir,"sge2Behavior_shortCols_phase1_adj",samplingDate,".txt"),
-                quote = FALSE, 
-                sep = ",")
-    
-    methodsOut <- file(paste0(outDir,"sge2Behavior_phase",sgePhase,"_adj",samplingDate,"_methods.txt"))
-    writeLines(c(paste0("SGEII Phase ",sgePhase),
-                 paste0("Sample Date: ",samplingDate),
-                 paste0("animals = ",numAnimals),
-                 paste0("animals w/o DV2J = ",numAnimalsNoDV2J),
-                 paste0("Ordinal Rank ~ Introduction Number: R = ",rIntroElo),
-                 paste0("Ordinal Rank ~ Introduction Number: p = ",pIntroElo)), methodsOut)
-    close(methodsOut)
-
-  } else {
-    write.table(x = sge.behave.summary.full,
-                file = paste0(outDir,"sge2Behavior_","phase",sgePhase,".txt"),
-                quote = FALSE, 
-                sep = ",")
-    write.table(x = sge.behave.summary,
-                file = paste0(outDir,"sge2Behavior_shortCols_phase",sgePhase,".txt"),
-                quote = FALSE, 
-                sep = ",")
-    
-    methodsOut <- file(paste0(outDir,"sge2Behavior_phase",sgePhase,"_methods.txt"))
-    writeLines(c(paste0("SGEII Phase ",sgePhase),
-                 paste0("Sample Date: Whole Phase"),
-                 paste0("animals = ",numAnimals),
-                 paste0("animals w/o DV2J = ",numAnimalsNoDV2J),
-                 paste0("Ordinal Rank ~ Introduction Number: R = ",rIntroElo),
-                 paste0("Ordinal Rank ~ Introduction Number: p = ",pIntroElo)), methodsOut)
-    close(methodsOut)
-  }
+  write.table(x = sge.behave.summary.full,
+              file = paste0(outDir,"sge2Behavior_phase",sgePhase,"_adj",samplingDate,".txt"),
+              quote = FALSE, 
+              sep = ",")
+  write.table(x = sge.behave.summary,
+              file = paste0(outDir,"sge2Behavior_shortCols_phase",sgePhase,"_adj",samplingDate,".txt"),
+              quote = FALSE, 
+              sep = ",")
+  
+  methodsOut <- file(paste0(outDir,"sge2Behavior_phase",sgePhase,"_adj",samplingDate,"_methods.txt"))
+  writeLines(c(paste0("SGEII Phase ",sgePhase),
+               paste0("Sample Date: ",samplingDate),
+               paste0("animals = ",numAnimals),
+               paste0("animals w/o DV2J = ",numAnimalsNoDV2J),
+               paste0("Ordinal Rank ~ Introduction Number: R = ",rIntroElo),
+               paste0("Ordinal Rank ~ Introduction Number: p = ",pIntroElo)), methodsOut)
+  close(methodsOut)
 }
 ```
 
@@ -624,7 +643,7 @@ for (samplingDate in c("SingleCell","Vax","EnvChall")) {
     ggtitle(paste0("Centered Elo: at ",samplingDate," v. Full - SGEII Phase ",sgePhase),
             subtitle = paste0(avgKept," of Phase Obs. used | R = ", eloCorr))
   
-  ggsave(paste0(figDir,samplingDate,"vFull_centElo_XYplot.png"),
+  ggsave(paste0(figDir,"sge2phase1_",samplingDate,"vFull_centElo_XYplot.png"),
          width = 6, height = 4)
 
   agrCorr <- round(cor.test(x = compareData$groupcent_agRec.full,
@@ -639,7 +658,7 @@ for (samplingDate in c("SingleCell","Vax","EnvChall")) {
     ggtitle(paste0("Centered AgRec: at ",samplingDate," v. Full - SGEII Phase ",sgePhase),
             subtitle = paste0(avgKept," of Phase Obs. used | R = ", agrCorr))
   
-  ggsave(paste0(figDir,samplingDate,"vFull_centAgRec_XYplot.png"),
+  ggsave(paste0(figDir,"sge2phase1_",samplingDate,"vFull_centAgRec_XYplot.png"),
          width = 6, height = 4)
 
   grmCorr <- round(cor.test(x = compareData$groupcent_groom.full,
@@ -654,7 +673,7 @@ for (samplingDate in c("SingleCell","Vax","EnvChall")) {
     ggtitle(paste0("Centered Groom: at ",samplingDate," v. Full - SGEII Phase ",sgePhase),
             subtitle = paste0(avgKept," of Phase Obs. used | R = ", grmCorr))
   
-    ggsave(paste0(figDir,samplingDate,"vFull_centGroom_XYplot.png"),
+    ggsave(paste0(figDir,"sge2phase1_",samplingDate,"vFull_centGroom_XYplot.png"),
          width = 6, height = 4)
 
     groupByGroup <- rbind.data.frame(groupByGroup,

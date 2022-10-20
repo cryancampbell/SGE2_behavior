@@ -1,14 +1,32 @@
 ## SGE2_behavior
 Code to calculate final behavioral metrics for SGE2 Phases 1 &amp; 2
 
-This is final code to generate group-centered Agonisms Received Rate, Overall Grooming Rate, and Elo for SGE2 phases 1 & 2.
-This code will output behavioral values for all animals, for all 4 experiments (SGE2p1 Environmental Challenge, SGE2p1 Single Cell, SGE2p1 Vaccine, SGE2p2 Vaccine)
-It will also generate dataset-specific numbers to complete a clear methods section (behavior_methods_text.txt)
+<p>This is final code to generate group-centered Agonisms Received Rate, Overall Grooming Rate, and Elo for SGE2 phases 1 & 2.<br>
+This code will output behavioral values for all animals, for all 4 experiments (SGE2p1 Environmental Challenge, SGE2p1 Single Cell, SGE2p1 Vaccine, SGE2p2 Vaccine)<br>
+It will also generate dataset-specific numbers to complete a clear methods section (behavior_methods_text.txt)</p>
 
-# Column descriptions
+# Column Descriptions shortCols file
+object = sge.behave.summary
+file = sge2Behavior_shortCols_phase<1/2>_adj<SingleCell/Vax/EnvChall>.txt
+
+<p>ID - Individual ID, two-letter code (e.g. AI where full animal ID is RAi10)<br>
+phase - Phase of SGEII Experiment<br>
+group - Individual's Group<br>
+rawGroomRate - grooming minutes per hour; (groom.min/no.obs)*2<br>
+rawAggRecRate - aggression events received per hour; (agg.received.count/no.obs)*2<br>
+calcElo - Elo calculated from specified subset of data (pre-sample collection)<br>
+groupcent_groom - within group centered grooming rate<br>
+groupcent_agRec - within group centered rate of agonisms received<br>
+groupcent_elo - within group centered Elo<br>
+adjDate - title of experiment that data was generated for<br>
+fractionKept - fraction of full phase's observations used, fraction of observations taken before this experiment<br>
+animalID - Full animal ID (R__##, e.g. RAi10 where two-letter is AI)<br>
+experimentDate - date of sampling for this animal</p>
+
+
 for:
 object = sge.behave.summary.full
-file = sge2Behavior_shortCols_phase<1/2>_adj<SingleCell/Vax/EnvChall>.txt
+file = sge2Behavior_phase<1/2>_adj<SingleCell/Vax/EnvChall>.txt
 
 <p>ID - Individual ID, two-letter code<br>
 phase.agg - Phase of SGEII Experiment<br>
@@ -34,9 +52,9 @@ rawAggRecRate - aggression events received per hour; (agg.received.count/no.obs)
 calcOrdRank - ordinal rank from calcElo (from specified subset of data, pre-sample collection)<br>
 groupcent_groom - within group centered grooming rate<br>
 groupcent_agRec - within group centered rate of agonisms received<br>
-groupcent_elo - within group cenetered Elo<br>
+groupcent_elo - within group centered Elo<br>
 group.gc - Individual's Group<br>
 adjDate - experiment that data was generated for<br>
 fractionKept - fraction of full phase's observations used, fraction of observations taken before this experiment<br>
 animalID - Full animal ID (R__##, e.g. RAi10 where two-letter is AI)<br>
-experimentDate - date of sampling for this animal<br>
+experimentDate - date of sampling for this animal</p>
