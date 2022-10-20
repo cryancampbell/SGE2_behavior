@@ -1,0 +1,6 @@
+SGEII Phase 1
+Sample Date: Vax
+animals = 49
+animals w/o DV2J = 48
+Ordinal Rank ~ Introduction Number: R = 0.541159118457189
+Ordinal Rank ~ Introduction Number: p = 5.94853266318781e-05

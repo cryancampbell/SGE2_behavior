@@ -1,0 +1,6 @@
+SGEII Phase 1
+Sample Date: SingleCell
+animals = 49
+animals w/o DV2J = 48
+Ordinal Rank ~ Introduction Number: R = 0.530948569052336
+Ordinal Rank ~ Introduction Number: p = 8.67963007111908e-05

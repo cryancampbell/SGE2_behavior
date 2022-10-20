@@ -118,21 +118,28 @@ centered.scaled.aggGiven.rate = centered and scaled agg given rate; scale(raw.ag
 adjustData <- TRUE ### section in the code exists to drop data by date, but i haven't implemented that here
 samplingDate <- "SingleCell" #or Vax or EnvChall
 sgePhase <- 1
+rowNum <- 2
 
 # data frame of datasets to generate
-dataCombos <- cbind.data.frame(c(FALSE,FALSE,TRUE,TRUE,TRUE),
-                               c(1,2,1,1,1),
-                               c("","","SingleCell","Vax","EnvChall"))
+# dataCombos <- cbind.data.frame(c(FALSE,FALSE,TRUE,TRUE,TRUE),
+#                                c(1,2,1,1,1),
+#                                c("","","SingleCell","Vax","EnvChall"))
+
+#Phase 1 ONLY
+dataCombos <- cbind.data.frame(c(FALSE,TRUE,TRUE,TRUE),
+                               c(1,1,1,1),
+                               c("","SingleCell","Vax","EnvChall"))
+
+
 
 colnames(dataCombos) <- c("adjustData","sgePhase","samplingDate")
 
-r <- 1
-
-for (r in 1:dim(dataCombos)[1]) {
+for (rowNum in 1:dim(dataCombos)[1]) {
   
-  adjustData <- dataCombos$adjustData[r]
-  samplingDate <- dataCombos$samplingDate[r]
-  sgePhase <- dataCombos$sgePhase[r]
+  print(rowNum)
+  adjustData <- dataCombos$adjustData[rowNum]
+  samplingDate <- dataCombos$samplingDate[rowNum]
+  sgePhase <- dataCombos$sgePhase[rowNum]
   
   dateDF <- sampleDates[colnames(sampleDates) %in% c("animal","group",paste0("date",samplingDate))]
   
@@ -412,13 +419,29 @@ for (r in 1:dim(dataCombos)[1]) {
   sge.behave.summary$rawGroomRate <- (sge.behave.summary$min / sge.behave.summary$num.obs ) * 2
   sge.behave.summary$rawAggRecRate <- (sge.behave.summary$agg.received / sge.behave.summary$num.obs ) * 2
   
+  #get ordinal rank before we drop DV2J
+  sge.behave.summary$calcOrdRank <- 0
+  for (g in groupIDs) {
+    groupOrdRank <- rank(-subset(sge.behave.summary, group.agg == g)$calcElo)
+    sge.behave.summary$calcOrdRank[which(sge.behave.summary$group.agg == g)] <- groupOrdRank
+  }
   
+  # R of order of intro ~ order of Elo
+  rIntroElo <- cor.test(sge.behave.summary$calcOrdRank, sge.behave.summary$intro.no)$estimate
+  # p of order of intro ~ order of Elo
+  pIntroElo <- cor.test(sge.behave.summary$calcOrdRank, sge.behave.summary$intro.no)$p.value
   
-  ### drop DV / DVJ2
-  ###
-  ### here DV / DVJ2 is dropped from the group-centering process, NOT the calculation of all behaviors
-  ### so when another animal won an Elo bout against DV2J she still benefited
-  ### but that group's averages are different without the inclusion of DV2J
+  ggplot(data = sge.behave.summary,
+         aes(x = intro.no,
+             y = calcOrdRank)) +
+    geom_smooth(method = "lm", formula = "y~x", se = FALSE, lwd = .5, col = "black") +
+    geom_jitter(aes(col = group.agg), size = 3, height = .1, width = .1) +
+    labs(col = "Group") +
+    xlab("Order of Introduction") + ylab("Ordinal Rank from Elo")
+    ggtitle(paste0("Ordinal Rank v. Introduction Order, ",samplingDate," SGEII Phase ",sgePhase),
+            subtitle = paste0("R = ",round(rIntroElo, digits = 3)))
+  ggsave(paste0(figDir,samplingDate,"_EloRank_v_IntroOrder_XYplot.png"),
+         width = 6, height = 4)
   
   sge.behave.summary <- subset(sge.behave.summary, ID != "DV")
   
@@ -493,7 +516,25 @@ for (r in 1:dim(dataCombos)[1]) {
   colnames(sge.behave.summary)[which(colnames(sge.behave.summary) == "phase.agg")] <- "phase"
   colnames(sge.behave.summary)[which(colnames(sge.behave.summary) == "group.agg")] <- "group"
   
+  ## Generate filler text for methods section:
+  # total observation hours for each group
+  groupIDs <- unique(sge.behave.summary.full$group.agg)
+  groupObs <- vector()
+  #get the number of observation periods for each group
+  for (g in groupIDs) {
+    groupObs <- c(groupObs,max(subset(sge.behave.summary.full, group.agg == g)$num.obs))
+  }
+  #an observation period is 30 mins, so the total hours of obs = sum(group obs periods) / 2
+  obsHours <- sum(groupObs) / 2
+  # number of groups
+  numGroups <- length(unique(sge.behave.summary.full$group.agg))
+  # number of animals (in behavior measure)
+  numAnimals <- length(unique(sge.behave.summary.full$animalID)) + 1
+  # number of animals (in behavior measure, without DV2J)
+  numAnimalsNoDV2J <- length(unique(sge.behave.summary.full$animalID))
   
+  
+
   if ( adjustData == TRUE & sgePhase == 1 ) {
     write.table(x = sge.behave.summary.full,
                 file = paste0(outDir,"sge2Behavior_phase1_adj",samplingDate,".txt"),
@@ -503,6 +544,16 @@ for (r in 1:dim(dataCombos)[1]) {
                 file = paste0(outDir,"sge2Behavior_shortCols_phase1_adj",samplingDate,".txt"),
                 quote = FALSE, 
                 sep = ",")
+    
+    methodsOut <- file(paste0(outDir,"sge2Behavior_phase",sgePhase,"_adj",samplingDate,"_methods.txt"))
+    writeLines(c(paste0("SGEII Phase ",sgePhase),
+                 paste0("Sample Date: ",samplingDate),
+                 paste0("animals = ",numAnimals),
+                 paste0("animals w/o DV2J = ",numAnimalsNoDV2J),
+                 paste0("Ordinal Rank ~ Introduction Number: R = ",rIntroElo),
+                 paste0("Ordinal Rank ~ Introduction Number: p = ",pIntroElo)), methodsOut)
+    close(methodsOut)
+
   } else {
     write.table(x = sge.behave.summary.full,
                 file = paste0(outDir,"sge2Behavior_","phase",sgePhase,".txt"),
@@ -512,6 +563,15 @@ for (r in 1:dim(dataCombos)[1]) {
                 file = paste0(outDir,"sge2Behavior_shortCols_phase",sgePhase,".txt"),
                 quote = FALSE, 
                 sep = ",")
+    
+    methodsOut <- file(paste0(outDir,"sge2Behavior_phase",sgePhase,"_methods.txt"))
+    writeLines(c(paste0("SGEII Phase ",sgePhase),
+                 paste0("Sample Date: Whole Phase"),
+                 paste0("animals = ",numAnimals),
+                 paste0("animals w/o DV2J = ",numAnimalsNoDV2J),
+                 paste0("Ordinal Rank ~ Introduction Number: R = ",rIntroElo),
+                 paste0("Ordinal Rank ~ Introduction Number: p = ",pIntroElo)), methodsOut)
+    close(methodsOut)
   }
 }
 ```
@@ -596,4 +656,20 @@ ggplot(data = groupByGroup,
 
 ggsave(paste0(figDir,"groupByGroup_observations_by_samplingpoint.png"),
          width = 6, height = 4)
+```
+
+#Correlations between metrics within a sampling point
+```{r}
+# data frame of datasets to generate
+# dataCombos <- cbind.data.frame(c(FALSE,FALSE,TRUE,TRUE,TRUE),
+#                                c(1,2,1,1,1),
+#                                c("","","SingleCell","Vax","EnvChall"))
+
+#Phase 1 ONLY
+dataCombos <- cbind.data.frame(c(FALSE,TRUE,TRUE,TRUE),
+                               c(1,1,1,1),
+                               c("","SingleCell","Vax","EnvChall"))
+
+
+
 ```
