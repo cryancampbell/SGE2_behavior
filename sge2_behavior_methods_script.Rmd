@@ -756,19 +756,3 @@ ggplot(data = groupByGroup,
 ggsave(paste0(figDir,"/phase",sgePhase,"/","groupByGroup_observations_by_samplingpoint.png"),
          width = 6, height = 4)
 ```
-
-#Correlations between metrics within a sampling point
-```{r}
-# data frame of datasets to generate
-# dataCombos <- cbind.data.frame(c(FALSE,FALSE,TRUE,TRUE,TRUE),
-#                                c(1,2,1,1,1),
-#                                c("","","SingleCell","Vax","EnvChall"))
-
-#Phase 1 ONLY
-dataCombos <- cbind.data.frame(c(FALSE,TRUE,TRUE,TRUE),
-                               c(1,1,1,1),
-                               c("","SingleCell","Vax","EnvChall"))
-
-
-
-```
