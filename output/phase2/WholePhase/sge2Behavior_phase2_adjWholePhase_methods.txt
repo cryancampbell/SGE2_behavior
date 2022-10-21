@@ -1,5 +1,6 @@
 SGEII Phase 2
 Sample Date: WholePhase
+Observation Hours: 97.5
 animals = 44
 animals w/o DV2J = 43
 Ordinal Rank ~ Introduction Number: R = -0.420314151955586

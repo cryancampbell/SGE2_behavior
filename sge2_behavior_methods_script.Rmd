@@ -611,6 +611,7 @@ for (rowNum in 1:dim(dataCombos)[1]) {
   methodsOut <- file(paste0(outDir,"phase",sgePhase,"/",samplingDate,"/","sge2Behavior_phase",sgePhase,"_adj",samplingDate,"_methods.txt"))
   writeLines(c(paste0("SGEII Phase ",sgePhase),
                paste0("Sample Date: ",samplingDate),
+               paste0("Observation Hours: ",obsHours),
                paste0("animals = ",numAnimals),
                paste0("animals w/o DV2J = ",numAnimalsNoDV2J),
                paste0("Ordinal Rank ~ Introduction Number: R = ",rIntroElo),
