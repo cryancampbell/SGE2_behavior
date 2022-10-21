@@ -7,7 +7,7 @@ It will also generate dataset-specific numbers to complete a clear methods secti
 
 ### shortCols file Description
 <p>object = sge.behave.summary<br>
-file = sge2Behavior_shortCols_phase<1/2>_adj<SingleCell/Vax/EnvChall>.txt</p>
+file = sge2Behavior_shortCols_phase[1/2]_adj[SingleCell/Vax/EnvChall].txt</p>
 
 <p>ID - Individual ID, two-letter code (e.g. AI where full animal ID is RAi10)<br>
 phase - Phase of SGEII Experiment<br>
@@ -25,7 +25,7 @@ experimentDate - date of sampling for this animal</p>
 
 ### full file Description
 <p>object = sge.behave.summary.full<br>
-file = sge2Behavior_phase<1/2>_adj<SingleCell/Vax/EnvChall>.txt</p>
+file = sge2Behavior_phase[1/2]_adj[SingleCell/Vax/EnvChall].txt</p>
 
 <p>ID - Individual ID, two-letter code<br>
 phase.agg - Phase of SGEII Experiment<br>

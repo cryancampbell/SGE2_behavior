@@ -136,7 +136,7 @@ rowNum <- 6
 # data frame of datasets to generate
 dataCombos <- cbind.data.frame(c(FALSE,FALSE,TRUE,TRUE,TRUE,TRUE),
                                c(1,2,1,1,1,2),
-                               c("","","SingleCell","Vax","EnvChall","Vax"))
+                               c("WholePhase","WholePhase","SingleCell","Vax","EnvChall","Vax"))
 
 #Phase 1 ONLY
 #dataCombos <- cbind.data.frame(c(FALSE,TRUE,TRUE,TRUE),
@@ -153,6 +153,11 @@ for (rowNum in 1:dim(dataCombos)[1]) {
   adjustData <- dataCombos$adjustData[rowNum]
   samplingDate <- dataCombos$samplingDate[rowNum]
   sgePhase <- dataCombos$sgePhase[rowNum]
+  
+  dir.create(paste0(figDir,"phase",sgePhase))
+  dir.create(paste0(figDir,"phase",sgePhase,"/",samplingDate))
+  dir.create(paste0(outDir,"phase",sgePhase))
+  dir.create(paste0(outDir,"phase",sgePhase,"/",samplingDate))
   
   if (sgePhase == 1) {
     dateDF <- sampleDates[colnames(sampleDates) %in% c("animal","group",paste0("date",samplingDate))]
@@ -469,10 +474,6 @@ for (rowNum in 1:dim(dataCombos)[1]) {
     sge.behave.summary$calcOrdRank[which(sge.behave.summary$group.agg == g)] <- groupOrdRank
   }
   
-  if (adjustData == FALSE) {
-    samplingDate <- "WholePhase"
-  }
-  
   # R of order of intro ~ order of Elo
   rIntroElo <- cor.test(sge.behave.summary$calcOrdRank, sge.behave.summary$intro.no)$estimate
   # p of order of intro ~ order of Elo
@@ -487,7 +488,7 @@ for (rowNum in 1:dim(dataCombos)[1]) {
     xlab("Order of Introduction") + ylab("Ordinal Rank from Elo") +
     ggtitle(paste0("Ordinal Rank v. Introduction Order, ",samplingDate," SGEII Phase ",sgePhase),
             subtitle = paste0("R = ",round(rIntroElo, digits = 3)))
-  ggsave(paste0(figDir,"sge2phase",sgePhase,"_",samplingDate,"_EloRank_v_IntroOrder_XYplot.png"),
+  ggsave(paste0(figDir,"phase",sgePhase,"/",samplingDate,"/","sge2phase",sgePhase,"_",samplingDate,"_EloRank_v_IntroOrder_XYplot.png"),
          width = 6, height = 4)
   
   sge.behave.summary <- subset(sge.behave.summary, ID != "DV")
@@ -592,15 +593,15 @@ for (rowNum in 1:dim(dataCombos)[1]) {
   
   
   write.table(x = sge.behave.summary.full,
-              file = paste0(outDir,"sge2Behavior_phase",sgePhase,"_adj",samplingDate,".txt"),
+              file = paste0(outDir,"phase",sgePhase,"/",samplingDate,"/","sge2Behavior_phase",sgePhase,"_adj",samplingDate,".txt"),
               quote = FALSE, 
               sep = ",")
   write.table(x = sge.behave.summary,
-              file = paste0(outDir,"sge2Behavior_shortCols_phase",sgePhase,"_adj",samplingDate,".txt"),
+              file = paste0(outDir,"phase",sgePhase,"/",samplingDate,"/","sge2Behavior_shortCols_phase",sgePhase,"_adj",samplingDate,".txt"),
               quote = FALSE, 
               sep = ",")
   
-  methodsOut <- file(paste0(outDir,"sge2Behavior_phase",sgePhase,"_adj",samplingDate,"_methods.txt"))
+  methodsOut <- file(paste0(outDir,"phase",sgePhase,"/",samplingDate,"/","sge2Behavior_phase",sgePhase,"_adj",samplingDate,"_methods.txt"))
   writeLines(c(paste0("SGEII Phase ",sgePhase),
                paste0("Sample Date: ",samplingDate),
                paste0("animals = ",numAnimals),
@@ -643,7 +644,7 @@ for (samplingDate in c("SingleCell","Vax","EnvChall")) {
     ggtitle(paste0("Centered Elo: at ",samplingDate," v. Full - SGEII Phase ",sgePhase),
             subtitle = paste0(avgKept," of Phase Obs. used | R = ", eloCorr))
   
-  ggsave(paste0(figDir,"sge2phase1_",samplingDate,"vFull_centElo_XYplot.png"),
+  ggsave(paste0(figDir,"/phase",sgePhase,"/",samplingDate,"/","sge2phase1_",samplingDate,"vFull_centElo_XYplot.png"),
          width = 6, height = 4)
 
   agrCorr <- round(cor.test(x = compareData$groupcent_agRec.full,
@@ -658,7 +659,7 @@ for (samplingDate in c("SingleCell","Vax","EnvChall")) {
     ggtitle(paste0("Centered AgRec: at ",samplingDate," v. Full - SGEII Phase ",sgePhase),
             subtitle = paste0(avgKept," of Phase Obs. used | R = ", agrCorr))
   
-  ggsave(paste0(figDir,"sge2phase1_",samplingDate,"vFull_centAgRec_XYplot.png"),
+  ggsave(paste0(figDir,"/phase",sgePhase,"/",samplingDate,"/","sge2phase1_",samplingDate,"vFull_centAgRec_XYplot.png"),
          width = 6, height = 4)
 
   grmCorr <- round(cor.test(x = compareData$groupcent_groom.full,
@@ -673,7 +674,7 @@ for (samplingDate in c("SingleCell","Vax","EnvChall")) {
     ggtitle(paste0("Centered Groom: at ",samplingDate," v. Full - SGEII Phase ",sgePhase),
             subtitle = paste0(avgKept," of Phase Obs. used | R = ", grmCorr))
   
-    ggsave(paste0(figDir,"sge2phase1_",samplingDate,"vFull_centGroom_XYplot.png"),
+    ggsave(paste0(figDir,"/phase",sgePhase,"/",samplingDate,"/","sge2phase1_",samplingDate,"vFull_centGroom_XYplot.png"),
          width = 6, height = 4)
 
     groupByGroup <- rbind.data.frame(groupByGroup,
@@ -689,7 +690,7 @@ ggplot(data = groupByGroup,
   geom_jitter(aes(col = group), size = 3, width = 0, height = .1) +
   xlim(c(0,1))
 
-ggsave(paste0(figDir,"groupByGroup_observations_by_samplingpoint.png"),
+ggsave(paste0(figDir,"/phase",sgePhase,"/","groupByGroup_observations_by_samplingpoint.png"),
          width = 6, height = 4)
 ```
 
