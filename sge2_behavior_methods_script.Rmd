@@ -487,7 +487,7 @@ for (rowNum in 1:dim(dataCombos)[1]) {
     labs(col = "Group") +
     xlab("Order of Introduction") + ylab("Dominance Rank (Elo)") +
     ggtitle(paste0("Dominance Rank v. Introduction Order, ",samplingDate," SGEII Phase ",sgePhase),
-            subtitle = paste0("R = ",round(rIntroElo, digits = 3)))
+            subtitle = paste0("R = ",signif(rIntroElo, digits = 3)," | p = ",signif(pIntroElo, digits = 3)))
   ggsave(paste0(figDir,"phase",sgePhase,"/",samplingDate,"/","sge2phase",sgePhase,"_",samplingDate,"_EloRank_v_IntroOrder_XYplot.png"),
          width = 6, height = 4)
   
@@ -573,6 +573,61 @@ for (rowNum in 1:dim(dataCombos)[1]) {
   
   colnames(sge.behave.summary)[which(colnames(sge.behave.summary) == "phase.agg")] <- "phase"
   colnames(sge.behave.summary)[which(colnames(sge.behave.summary) == "group.agg")] <- "group"
+  
+  #correlations between metrics
+  ## Elo - AgRec
+  # R 
+  rMetCorr <- cor.test(sge.behave.summary$groupcent_agRec, sge.behave.summary$groupcent_elo)$estimate
+  # p 
+  pMetCorr <- cor.test(sge.behave.summary$groupcent_agRec, sge.behave.summary$groupcent_elo)$p.value
+  
+  ggplot(data = sge.behave.summary,
+         aes(y = groupcent_agRec,
+             x = groupcent_elo)) +
+    geom_smooth(method = "lm", formula = "y~x", se = FALSE, lwd = .5, col = "black") +
+    geom_jitter(aes(col = group), size = 3, height = .1, width = .1) +
+    labs(col = "Group") +
+    xlab("Group-Centered Elo") + ylab("Group-Centered AgRec") +
+    ggtitle(paste0("Group-Centered AgRec v. Group-Centered Elo, ",samplingDate," SGEII Phase ",sgePhase),
+            subtitle = paste0("R = ",signif(rMetCorr, digits = 3)," | p = ",signif(pMetCorr, digits = 3)))
+  ggsave(paste0(figDir,"phase",sgePhase,"/",samplingDate,"/","sge2phase",sgePhase,"_",samplingDate,"_gcAgRec_v_gcElo_XYplot.png"),
+         width = 6, height = 4)
+
+  ## Elo - Groom
+  # R 
+  rMetCorr <- cor.test(sge.behave.summary$groupcent_groom, sge.behave.summary$groupcent_elo)$estimate
+  # p 
+  pMetCorr <- cor.test(sge.behave.summary$groupcent_groom, sge.behave.summary$groupcent_elo)$p.value
+  
+  ggplot(data = sge.behave.summary,
+         aes(y = groupcent_groom,
+             x = groupcent_elo)) +
+    geom_smooth(method = "lm", formula = "y~x", se = FALSE, lwd = .5, col = "black") +
+    geom_jitter(aes(col = group), size = 3, height = .1, width = .1) +
+    labs(col = "Group") +
+    xlab("Group-Centered Elo") + ylab("Group-Centered Groom") +
+    ggtitle(paste0("Group-Centered Groom v. Group-Centered Elo, ",samplingDate," SGEII Phase ",sgePhase),
+            subtitle = paste0("R = ",signif(rMetCorr, digits = 3)," | p = ",signif(pMetCorr, digits = 3)))
+  ggsave(paste0(figDir,"phase",sgePhase,"/",samplingDate,"/","sge2phase",sgePhase,"_",samplingDate,"_gcGroom_v_gcElo_XYplot.png"),
+         width = 6, height = 4)
+
+  ## AgRec - Groom
+  # R 
+  rMetCorr <- cor.test(sge.behave.summary$groupcent_groom, sge.behave.summary$groupcent_agRec)$estimate
+  # p 
+  pMetCorr <- cor.test(sge.behave.summary$groupcent_groom, sge.behave.summary$groupcent_agRec)$p.value
+  
+  ggplot(data = sge.behave.summary,
+         aes(y = groupcent_groom,
+             x = groupcent_agRec)) +
+    geom_smooth(method = "lm", formula = "y~x", se = FALSE, lwd = .5, col = "black") +
+    geom_jitter(aes(col = group), size = 3, height = .1, width = .1) +
+    labs(col = "Group") +
+    xlab("Group-Centered AgRec") + ylab("Group-Centered Groom") +
+    ggtitle(paste0("Group-Centered Groom v. Group-Centered AgRec, ",samplingDate," SGEII Phase ",sgePhase),
+            subtitle = paste0("R = ",signif(rMetCorr, digits = 3)," | p = ",signif(pMetCorr, digits = 3)))
+  ggsave(paste0(figDir,"phase",sgePhase,"/",samplingDate,"/","sge2phase",sgePhase,"_",samplingDate,"_gcGroom_v_gcAgRec_XYplot.png"),
+         width = 6, height = 4)
   
   ## Generate filler text for methods section:
   # total observation hours for each group
