@@ -18,9 +18,15 @@ workDir <- getwd()
 dataDir <- paste0(workDir,"/data/")
 outDir <- paste0(workDir,"/output/")
 figDir <- paste0(workDir,"/figures/")
-dir.create(dataDir)
-dir.create(outDir)
-dir.create(figDir)
+if(!"data" %in% list.files(workDir)) {
+  dir.create(dataDir)
+}
+if(!"output" %in% list.files(workDir)) {
+  dir.create(outDir)
+}
+if(!"figures" %in% list.files(workDir)) {
+  dir.create(figDir)
+}
 
 ```
 
@@ -129,21 +135,14 @@ experimentDate - date of sampling for this animal
 
 #example values
 adjustData <- TRUE ### section in the code exists to drop data by date, but i haven't implemented that here
-samplingDate <- "SingleCell" #or Vax or EnvChall
-sgePhase <- 1
-rowNum <- 6
+samplingDate <- "Vax" #or Vax or EnvChall
+sgePhase <- 2
+rowNum <- 2
 
 # data frame of datasets to generate
 dataCombos <- cbind.data.frame(c(FALSE,FALSE,TRUE,TRUE,TRUE,TRUE),
                                c(1,2,1,1,1,2),
                                c("WholePhase","WholePhase","SingleCell","Vax","EnvChall","Vax"))
-
-#Phase 1 ONLY
-#dataCombos <- cbind.data.frame(c(FALSE,TRUE,TRUE,TRUE),
-#                               c(1,1,1,1),
-#                               c("","SingleCell","Vax","EnvChall"))
-
-
 
 colnames(dataCombos) <- c("adjustData","sgePhase","samplingDate")
 
@@ -177,6 +176,9 @@ for (rowNum in 1:dim(dataCombos)[1]) {
       
       colnames(dateDF)[which(colnames(dateDF) == "date")] <- paste0("date",samplingDate)
     }
+    
+    #single animal was not in intro_all phase 2, exists in behavior data
+    dateDF <- rbind(dateDF,c("Sd4","SPF1"))
   }
   
   #add two letter code to dateDF
@@ -206,7 +208,16 @@ for (rowNum in 1:dim(dataCombos)[1]) {
   social <- lapply(phase_data,convert.soc)
   dominance <- lapply(phase_data,convert.dom.git)
   
-  ### This code allows for the dates to be modified, leaving out for now (10 Oct 2022)
+  #single animal was not in intro_all phase 2, exists in behavior data
+  intro_phase <- rbind(intro_phase,c("Sd4","SGE2","SPF1",5,500,1,5))
+  intro_phase$intro.no <- as.numeric(intro_phase$intro.no)
+  intro_phase$elo <- as.numeric(intro_phase$elo)
+  intro_phase$num.obs <- as.numeric(intro_phase$num.obs)
+  intro_phase$ordinal.rank <- as.numeric(intro_phase$ordinal.rank)
+  intro_phase <- intro_phase[order(intro_phase$group),]
+  rownames(intro_phase) <- as.character(1:dim(intro_phase)[1])
+  
+  ### This code allows for the dates to be modified
   
   if ( adjustData == TRUE) {
     
@@ -315,10 +326,14 @@ for (rowNum in 1:dim(dataCombos)[1]) {
   }  
   
   ## calculate grooming times
-  groom.tot$ID1.groom.min <- NA
-  groom.tot$ID2.groom.min <- NA
-  groom.tot$min <- NA
-  
+  #groom.tot$ID1.groom.min <- NA
+  #groom.tot$ID2.groom.min <- NA
+  #groom.tot$min <- NA
+  ## swapping NA for 0, because of SD with low observations
+  groom.tot$ID1.groom.min <- 0
+  groom.tot$ID2.groom.min <- 0
+  groom.tot$min <- 0
+    
   for (i in 1:nrow(groom.tot)){
     id1 <- groom.tot[i,"ID1"]
     id2 <- groom.tot[i,"ID2"]
@@ -492,6 +507,9 @@ for (rowNum in 1:dim(dataCombos)[1]) {
          width = 6, height = 4)
   
   sge.behave.summary <- subset(sge.behave.summary, ID != "DV")
+  
+  #!#!# Need some code here to determine if animals were in/out of group long enough #!#!#
+  
   
   sge.behave.summary$groupcent_groom <- 0
   sge.behave.summary$groupcent_agRec <- 0

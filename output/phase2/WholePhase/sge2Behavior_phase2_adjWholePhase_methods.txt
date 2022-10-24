@@ -1,7 +1,7 @@
 SGEII Phase 2
 Sample Date: WholePhase
 Observation Hours: 97.5
-animals = 44
-animals w/o DV2J = 43
-Ordinal Rank ~ Introduction Number: R = -0.420314151955586
-Ordinal Rank ~ Introduction Number: p = 0.00404443367179297
+animals = 45
+animals w/o DV2J = 44
+Ordinal Rank ~ Introduction Number: R = -0.42111898605175
+Ordinal Rank ~ Introduction Number: p = 0.00356330277988911
