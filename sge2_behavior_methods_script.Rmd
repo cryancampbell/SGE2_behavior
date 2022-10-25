@@ -45,6 +45,13 @@ sampleDatesP2$group <- gsub(pattern = "NO", replacement = "", sampleDatesP2$grou
 #match event text in phase 2, vax -> Vax, envChall -> EnvChall
 sampleDatesP2$event <- gsub(gsub(sampleDatesP2$event, pattern = "vax", replacement = "Vax"), pattern = "envChall",replacement = "EnvChall")
 
+#death and clinic dates
+clinicInfo <- read.csv(paste0(dataDir,"SGE_animal_deaths_and_clinic.csv"), sep = ",", dec = ".")
+clinicInfo$DeathDate <- as.Date(clinicInfo$DeathDate)
+
+groupStart <- read.csv(paste0(dataDir,"SGE_group_formation_dates.csv"), sep = ",", dec = ".")
+groupStart$Phase1Completion <- as.Date(groupStart$Phase1Completion)
+groupStart$Phase2Completion <- as.Date(groupStart$Phase2Completion)
 
 intro_all <- "https://github.com/ndsimons/sge.II.obs.analysis/raw/master/obs.data/intro_all_v3.txt"
 intro_all <- read.delim(intro_all)
@@ -137,7 +144,7 @@ experimentDate - date of sampling for this animal
 adjustData <- TRUE ### section in the code exists to drop data by date, but i haven't implemented that here
 samplingDate <- "Vax" #or Vax or EnvChall
 sgePhase <- 2
-rowNum <- 2
+rowNum <- 3
 
 # data frame of datasets to generate
 dataCombos <- cbind.data.frame(c(FALSE,FALSE,TRUE,TRUE,TRUE,TRUE),
@@ -181,11 +188,26 @@ for (rowNum in 1:dim(dataCombos)[1]) {
     dateDF <- rbind(dateDF,c("Sd4","SPF1"))
   }
   
+  dateDF[,3] <- as.Date(dateDF[,3])
+  
   #add two letter code to dateDF
   #replace moonlight, drop leading "R", swap for uppers
   dateDF$twoLetter <- gsub('77_06', 'mo', dateDF$animal)
   dateDF$twoLetter <- gsub('^R', '', dateDF$twoLetter)
   dateDF$twoLetter <- toupper(substr(dateDF$twoLetter, start = 1, stop = 2))
+  dateDF$dateStart <- NA
+  
+  #add group start date
+  for (grp in groupStart$Group) {
+    grpRow <- which(groupStart$Group == grp)
+    if (sgePhase == 1) {
+      dateDF$dateStart[dateDF$group == grp] <- groupStart$Phase1Completion[grpRow]
+    } else {
+      dateDF$dateStart[dateDF$group == grp] <- groupStart$Phase2Completion[grpRow]
+    }
+  }
+  
+  dateDF$dateStart <- as.Date(dateDF$dateStart)
   
   #create an "_1" group column
   dateDF$group_1 <- paste0(dateDF$group,"_1")
@@ -209,13 +231,15 @@ for (rowNum in 1:dim(dataCombos)[1]) {
   dominance <- lapply(phase_data,convert.dom.git)
   
   #single animal was not in intro_all phase 2, exists in behavior data
-  intro_phase <- rbind(intro_phase,c("Sd4","SGE2","SPF1",5,500,1,5))
-  intro_phase$intro.no <- as.numeric(intro_phase$intro.no)
-  intro_phase$elo <- as.numeric(intro_phase$elo)
-  intro_phase$num.obs <- as.numeric(intro_phase$num.obs)
-  intro_phase$ordinal.rank <- as.numeric(intro_phase$ordinal.rank)
-  intro_phase <- intro_phase[order(intro_phase$group),]
-  rownames(intro_phase) <- as.character(1:dim(intro_phase)[1])
+  if (sgePhase == 2) {
+    intro_phase <- rbind(intro_phase,c("Sd4","SGE2","SPF1",5,500,1,5))
+    intro_phase$intro.no <- as.numeric(intro_phase$intro.no)
+    intro_phase$elo <- as.numeric(intro_phase$elo)
+    intro_phase$num.obs <- as.numeric(intro_phase$num.obs)
+    intro_phase$ordinal.rank <- as.numeric(intro_phase$ordinal.rank)
+    intro_phase <- intro_phase[order(intro_phase$group),]
+    rownames(intro_phase) <- as.character(1:dim(intro_phase)[1])
+  }
   
   ### This code allows for the dates to be modified
   
@@ -508,8 +532,66 @@ for (rowNum in 1:dim(dataCombos)[1]) {
   
   sge.behave.summary <- subset(sge.behave.summary, ID != "DV")
   
+  #add fraction kept to sge behave
+  sge.behave.summary$adjDate <- samplingDate
+  
+  sge.behave.summary$fractionKept <- NA
+  sge.behave.summary$animalID <- ""
+  
+  sge.behave.summary$groupStart <- NA
+  sge.behave.summary$diedInPhase <- FALSE
+  sge.behave.summary$daysOut <- 0
+  sge.behave.summary$fracTimeInGroup <- 0
+  
+  for (i in sge.behave.summary$ID) {
+    print(i)
+    if (i %in% dateDF$twoLetter) {
+      dfDateRow <- which(dateDF$twoLetter == i)
+      behaveRow <- which(sge.behave.summary$ID == i)
+      
+      sge.behave.summary$animalID[behaveRow] <- dateDF$animal[dfDateRow]
+      sge.behave.summary$groupStart[behaveRow] <- dateDF$dateStart[dfDateRow]
+      
+      if (subset(clinicInfo, Phase == paste0("SGE",sgePhase) & Animal == sge.behave.summary$animalID[behaveRow])$Death == "yes") {
+        sge.behave.summary$diedInPhase[behaveRow] <- TRUE
+      }
+      
+      sge.behave.summary$daysOut[behaveRow] <- subset(clinicInfo, Phase == paste0("SGE",sgePhase) & Animal == sge.behave.summary$animalID[behaveRow])$DaysOutTot
+
+      
+      if (adjustData == FALSE) {
+        sge.behave.summary$fractionKept[behaveRow] <- 1
+      } else {
+        sge.behave.summary$fractionKept[behaveRow] <- dateDF$fracKept[dfDateRow]
+      }
+    }
+  }
+  
+  #add experiment date
+  sge.behave.summary$experimentDate <- NA
+  #date the group was sampled
+  sge.behave.summary$grpExpDate <- NA
+  
+  if (adjustData) {
+    for (anID in sge.behave.summary$ID) {
+      if (anID %in% dateDF$twoLetter) {
+        groupID <- subset(dateDF, twoLetter == anID)$group
+        sge.behave.summary$experimentDate[which(sge.behave.summary$ID == anID)] <- subset(dateDF, twoLetter == anID)[,3]
+        sge.behave.summary$grpExpDate[which(sge.behave.summary$ID == anID)] <- unique(sort(subset(dateDF, group == groupID)[,3]))[1]
+      }
+    }
+  }
+  
+  sge.behave.summary$groupStart <- as.Date(sge.behave.summary$groupStart)
+  sge.behave.summary$experimentDate <- as.Date(sge.behave.summary$experimentDate)
+  sge.behave.summary$grpExpDate <- as.Date(sge.behave.summary$grpExpDate)
+  
   #!#!# Need some code here to determine if animals were in/out of group long enough #!#!#
   
+  #this line currently calculates "days in clinic" (daysOut from file) over total group days between group start and experiment
+  sge.behave.summary$daysOut / as.numeric(sge.behave.summary$grpExpDate - sge.behave.summary$groupStart) > .5
+  #individuals < 0.5 for this metric are guaranteed to have been in the group over half the time
+  #individuals > 0.5 i need to check WHEN the dates they missed were, so i need to import more thorough data
   
   sge.behave.summary$groupcent_groom <- 0
   sge.behave.summary$groupcent_agRec <- 0
@@ -543,35 +625,6 @@ for (rowNum in 1:dim(dataCombos)[1]) {
     }
   }
   
-  #add fraction kept to sge behave
-  sge.behave.summary$adjDate <- samplingDate
-  
-  sge.behave.summary$fractionKept <- NA
-  sge.behave.summary$animalID <- ""
-  
-  for (i in sge.behave.summary$ID) {
-    if (i %in% dateDF$twoLetter) {
-      dfDateRow <- which(dateDF$twoLetter == i)
-      behaveRow <- which(sge.behave.summary$ID == i)
-      sge.behave.summary$animalID[behaveRow] <- dateDF$animal[dfDateRow]
-      if (adjustData == FALSE) {
-        sge.behave.summary$fractionKept[behaveRow] <- 1
-      } else {
-        sge.behave.summary$fractionKept[behaveRow] <- dateDF$fracKept[dfDateRow]
-      }
-    }
-  }
-  
-  #add experiment date
-  sge.behave.summary$experimentDate <- NA
-  
-  if (adjustData) {
-    for (anID in sge.behave.summary$ID) {
-      if (anID %in% dateDF$twoLetter) {
-        sge.behave.summary$experimentDate[which(sge.behave.summary$ID == anID)] <- subset(dateDF, twoLetter == anID)[,3]
-      }
-    }
-  }
   
   ## cut down columns to bare minimum
   sge.behave.summary.full <- sge.behave.summary
