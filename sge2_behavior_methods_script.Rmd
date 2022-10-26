@@ -98,6 +98,147 @@ convert.dom.git <- function(x) {
 }
 ```
 
+# Generate animal presence/absence data, clinicial pulls and deaths
+
+```{r clinical pulls and deaths}
+#need file of pulls + dates
+clinicalPulls <- read.table(paste0(dataDir,"clinicalPulls_allSGE2_forR.csv"), 
+                            sep = ",", header = T)
+
+clinicalPulls$group_completion_date <- as.Date(clinicalPulls$group_completion_date)
+clinicalPulls$clinical_date_in <- as.Date(clinicalPulls$clinical_date_in)
+clinicalPulls$clinical_date_out <- as.Date(clinicalPulls$clinical_date_out)
+
+
+#need file of sampling dates
+samplingDates <- read.table("~/Documents/giterdone/SGE2_behavior/data/samplingDates_allSGE2_forR.csv", sep = ",", header = T)
+samplingDates$dateSingleCellP1 <- as.Date(samplingDates$dateSingleCellP1)
+samplingDates$dateEnvChallP1 <- as.Date(samplingDates$dateEnvChallP1)
+samplingDates$dateVaxP1 <- as.Date(samplingDates$dateVaxP1)
+
+#for every phase 1 animal
+allAnimals <- samplingDates$animal[!is.na(samplingDates$groupP1)]
+
+#a <- allAnimals[14]
+#a <- allAnimals[25]
+
+animalVector <- vector()
+groupVector <- vector()
+eventVector <- vector()
+dateVector <- vector()
+
+for (a in allAnimals) {
+  #get group
+  grpID <- samplingDates$groupP1[which(samplingDates$animal == a)]
+  #use april 1st as plot end date
+  plotEndDate <- as.Date("2020-04-01")
+  absentDates <- vector()
+  
+  #get sampling dates
+  scDate <- samplingDates$dateSingleCellP1[which(samplingDates$animal == a)]
+  if ( !is.na(scDate) ) {
+    animalVector <- c(animalVector, a)
+    groupVector <- c(groupVector, groupID)
+    eventVector <- c(eventVector, "singleCell")
+    dateVector <- c(dateVector, scDate)
+  }
+  ecDate <- samplingDates$dateEnvChallP1[which(samplingDates$animal == a)]
+  if ( !is.na(ecDate) ) {
+    animalVector <- c(animalVector, a)
+    groupVector <- c(groupVector, groupID)
+    eventVector <- c(eventVector, "envChall")
+    dateVector <- c(dateVector, ecDate)
+  }
+  vaxDate <- samplingDates$dateVaxP1[which(samplingDates$animal == a)]
+  if ( !is.na(vaxDate) ) {
+    animalVector <- c(animalVector, a)
+    groupVector <- c(groupVector, groupID)
+    eventVector <- c(eventVector, "vaccine")
+    dateVector <- c(dateVector, vaxDate)
+  }
+  
+  groupCompleteDate <- subset(clinicalPulls, phase == "SGE1" & groupID == grpID)$group_completion_date[1]
+  
+  #if the animal was pulled, do these things:
+  if ( a %in% subset(clinicalPulls, phase == "SGE1")$Animal ) {
+    animalPulls <- subset(clinicalPulls, Animal == a & phase == "SGE1")
+  
+    #modify plot end date in the case of euthanasia
+    if ( "euthanized" %in% animalPulls$outformoreinfo ) {
+      plotEndDate <- animalPulls$clinical_date_out[which(animalPulls$outformoreinfo == "euthanized")]
+    }
+    
+    #create list of dates animal was absent
+    for (r in 1:dim(animalPulls)[1]) {
+      absentDates <- c(absentDates,
+                       animalPulls$clinical_date_in[r]:animalPulls$clinical_date_out[r])
+    }
+  }
+  
+  for (d in groupCompleteDate:plotEndDate) {
+    if ( d %in% absentDates ) {
+      animalVector <- c(animalVector, a)
+      groupVector <- c(groupVector, groupID)
+      eventVector <- c(eventVector, "clinical")
+      dateVector <- c(dateVector, d)
+    } else {
+      animalVector <- c(animalVector, a)
+      groupVector <- c(groupVector, groupID)
+      eventVector <- c(eventVector, "in")
+      dateVector <- c(dateVector, d)
+    }
+  }
+}
+
+sge2dates <- as.data.frame(cbind(animalVector,groupVector,eventVector,dateVector))
+sge2dates$dateVector <- as.Date.numeric(as.numeric(sge2dates$dateVector))
+
+
+colnames(sge2dates) <- c("animal","group","event","date")
+
+animalGroups <- unique(sge2dates[,1:2])
+animalGroups <- animalGroups[order(animalGroups$group),]
+
+groupDates <- unique(subset(clinicalPulls, phase == "SGE1")[,2:3])
+
+#add group date to animal groups object
+animalGroups$date <- ""
+for (r in 1:dim(animalGroups)[1]) {
+  groupID <- animalGroups$group[r]
+  groupDate <- groupDates$group_completion_date[which(groupDates$groupID == groupID)]
+  animalGroups$date[r] <- groupDate
+}
+
+animalGroups <- animalGroups[order(animalGroups$date),]
+
+sge2dates$animal <- factor(sge2dates$animal, levels = animalGroups$animal)
+
+sge2plotDates <- subset(sge2dates, date < "2019-04-01")
+
+sge2plotDates$animalGroup <- paste0(sge2plotDates$animal,"-",sge2plotDates$group)
+sge2plotDates$animalGroup <- factor(sge2plotDates$animalGroup, levels = paste0(animalGroups$animal,"-",animalGroups$group))
+
+
+ggplot() +
+  geom_point(aes(y = subset(sge2plotDates, event %in% c("in","clinical"))$animalGroup, 
+                 x = subset(sge2plotDates, event %in% c("in","clinical"))$date, 
+                 col = subset(sge2plotDates, event %in% c("in","clinical"))$event), size = 1) +
+  geom_point(aes(y = subset(sge2plotDates, !event %in% c("in","clinical"))$animalGroup, 
+                 x = subset(sge2plotDates, !event %in% c("in","clinical"))$date, 
+                 col = subset(sge2plotDates, !event %in% c("in","clinical"))$event), size = 3) +
+  scale_x_date(date_minor_breaks = "7 day", date_labels = "%b %Y") + labs(color = "event") +
+  xlab("Date") + ylab("Animal") + theme(axis.text.y = element_text(size = 6))
+
+ggsave(paste0(figDir,"sge2phase",sgePhase,"_samplingAndclinical_datePlot.png"), 
+       width = 8, height = 4)
+
+assign(value = sge2dates, x = paste0("sge2p",sgePhase,"dates"))
+
+```
+
+
+
+
 # Calculate Behavior Metric, Full & Partial Phase Data
 
 sge.behavioralRateData.df.readme
