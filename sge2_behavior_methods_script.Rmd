@@ -1085,7 +1085,10 @@ ggsave(paste0(figDir,"/groupByGroup_observations_by_samplingpoint.png"),
          width = 6, height = 4)
 ```
 
-```{r animals dropped from GC}
+```{r sandbox to test data}
+
+### who was dropped from analyses for 50%?
+rowNum <- 3
 
 for (rowNum in 1:dim(dataCombos)[1]) {
   samplingDate <- dataCombos$samplingDate[rowNum]
@@ -1102,5 +1105,23 @@ for (rowNum in 1:dim(dataCombos)[1]) {
     print(subset(allAnimalMeta, fracTimeInGroup < .5)$animalID)
   }
 }
+
+
+#group-intro order comparison for NSPF4/phase 1
+allAnimalMeta <- readRDS(file = paste0(outDir,"phase",sgePhase,"/",samplingDate,
+                                         "/sge2Behavior_phase",sgePhase,"_adj",samplingDate,"_allAnimals.RDS"))
+
+gcAnimalMeta <- readRDS(file = paste0(outDir,"phase",sgePhase,"/",samplingDate,
+                                         "/sge2Behavior_phase",sgePhase,"_adj",samplingDate,".RDS"))
+
+ggplot(data = gcAnimalMeta,
+       aes(x = intro.no,
+           y = groupcent_elo,
+           col = group.agg)) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = "y~x", se = FALSE)
+
+subset(gcAnimalMeta, group.agg == "NSPF4_1")
+
 ```
 
