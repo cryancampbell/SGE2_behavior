@@ -1,7 +1,8 @@
 SGEII Phase 2
 Sample Date: Vax
 Observation Hours: 97.5
-animals = 44
-animals w/o DV2J = 43
-Ordinal Rank ~ Introduction Number: R = -0.420314151955586
-Ordinal Rank ~ Introduction Number: p = 0.00404443367179297
+animals = 46
+animals w/o DV2J = 45
+animals in Group Centering = 40
+Ordinal Rank ~ Introduction Number: R = -0.42111898605175
+Ordinal Rank ~ Introduction Number: p = 0.00356330277988911
