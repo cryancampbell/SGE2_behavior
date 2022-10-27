@@ -3,6 +3,6 @@ Sample Date: Vax
 Observation Hours: 97.5
 animals = 46
 animals w/o DV2J = 45
-animals in Group Centering = 40
+animals in Group Centering = 44
 Ordinal Rank ~ Introduction Number: R = -0.42111898605175
 Ordinal Rank ~ Introduction Number: p = 0.00356330277988911
