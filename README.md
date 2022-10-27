@@ -66,3 +66,8 @@ groupStart - start date for the group, or the completion of introducing the anim
 diedInPhase - TRUE/FALSE for this animal<br>
 daysOut - number of days spent in clinic only<br>
 fracTimeInGroup - total days spent IN the group / total time between group start and experiment</p>
+
+### all animals file Description
+file = sge2Behavior_phase[1/2]_adj[SingleCell/Vax/EnvChall]_allAnimals.txt
+
+pre-group-centering, the raw metadata for every animal in the phase, this includes DV2J as well as animals who were present for less than the required 50% of the time 
