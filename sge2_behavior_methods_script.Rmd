@@ -320,6 +320,15 @@ phase.groom - Phase of SGEII Experiment
 rawGroomRate - grooming minutes per hour; (groom.min/no.obs)*2
 rawAggRecRate - aggression events received per hour; (agg.received.count/no.obs)*2
 calcOrdRank - ordinal rank from calcElo (from specified subset of data, pre-sample collection)
+experimentDate - date of the experiment for this animal
+grpExpDate - date of the experiment for this animal's group, should be populated even if the animal wasn't sampled
+adjDate - name of the experiment (SingleCell, Vaccine, etc)
+fractionKept - fraction of group's behavioral observations that occurred before the experiment
+animalID - full "R____" animal ID
+groupStart - start date for the group, or the completion of introducing the animals
+diedInPhase - TRUE/FALSE for this animal
+daysOut - number of days spent in clinic only
+fracTimeInGroup - total days spent IN the group / total time between group start and experiment
 groupcent_groom - within group centered grooming rate
 groupcent_agRec - within group centered rate of agonisms received
 groupcent_elo - within group cenetered Elo
@@ -329,11 +338,12 @@ fractionKept - fraction of full phase's observations used, fraction of observati
 animalID - Full animal ID (R__##, e.g. RAi10 where two-letter is AI)
 experimentDate - date of sampling for this animal
 
+
 ```{r calculated behavioral data from raw}
 ### grooming, agonisms received, & elo
 
 #example values
-#rowNum <- 6
+#rowNum <- 5
 
 # data frame of datasets to generate
 dataCombos <- cbind.data.frame(c(FALSE,FALSE,TRUE,TRUE,TRUE,TRUE,TRUE),
@@ -762,7 +772,7 @@ for (rowNum in 1:dim(dataCombos)[1]) {
   sge.behave.summary$daysOut <- 0
   sge.behave.summary$fracTimeInGroup <- 0
   
-  i <- sge.behave.summary$ID[8]
+  #i <- sge.behave.summary$ID[37]
   
   for (i in sge.behave.summary$ID) {
     #print(i)
@@ -786,7 +796,8 @@ for (rowNum in 1:dim(dataCombos)[1]) {
       daysOut <- dim(subset(sge2dates, animal == sge.behave.summary$animalID[behaveRow] & 
                                       date < sge.behave.summary$grpExpDate[behaveRow] & 
                                       event == "clinical"))[1]
-      totDays <- daysIn + daysOut
+      
+      totDays <- as.numeric(sge.behave.summary$grpExpDate[behaveRow] - sge.behave.summary$groupStart[behaveRow])
       
       sge.behave.summary$daysOut[behaveRow] <- daysOut
       sge.behave.summary$fracTimeInGroup[behaveRow] <- daysIn / totDays

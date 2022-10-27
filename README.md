@@ -56,4 +56,13 @@ group.gc - Individual's Group<br>
 adjDate - experiment that data was generated for<br>
 fractionKept - fraction of full phase's observations used, fraction of observations taken before this experiment<br>
 animalID - Full animal ID (R__##, e.g. RAi10 where two-letter is AI)<br>
-experimentDate - date of sampling for this animal</p>
+experimentDate - date of sampling for this animal<br>
+experimentDate - date of the experiment for this animal<br>
+grpExpDate - date of the experiment for this animal's group, should be populated even if the animal wasn't sampled<br>
+adjDate - name of the experiment (SingleCell, Vaccine, etc)<br>
+fractionKept - fraction of group's behavioral observations that occurred before the experiment<br>
+animalID - full "R____" animal ID<br>
+groupStart - start date for the group, or the completion of introducing the animals<br>
+diedInPhase - TRUE/FALSE for this animal<br>
+daysOut - number of days spent in clinic only<br>
+fracTimeInGroup - total days spent IN the group / total time between group start and experiment</p>
