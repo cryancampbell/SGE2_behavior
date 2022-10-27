@@ -3,6 +3,6 @@ Sample Date: WholePhase
 Observation Hours: 194
 animals = 49
 animals w/o DV2J = 48
-animals in Group Centering = 48
+animals in Group Centering = 47
 Ordinal Rank ~ Introduction Number: R = -0.5076298563133
 Ordinal Rank ~ Introduction Number: p = 0.000196858685023291

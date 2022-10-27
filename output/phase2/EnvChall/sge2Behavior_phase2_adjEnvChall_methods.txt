@@ -3,6 +3,6 @@ Sample Date: EnvChall
 Observation Hours: 97.5
 animals = 46
 animals w/o DV2J = 45
-animals in Group Centering = 44
+animals in Group Centering = 43
 Ordinal Rank ~ Introduction Number: R = -0.474443023487714
 Ordinal Rank ~ Introduction Number: p = 0.000864837500204403
