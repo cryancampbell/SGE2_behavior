@@ -336,7 +336,7 @@ experimentDate - date of sampling for this animal
 adjustData <- TRUE ### section in the code exists to drop data by date, but i haven't implemented that here
 samplingDate <- "Vax" #or Vax or EnvChall
 sgePhase <- 1
-rowNum <- 7
+rowNum <- 3
 
 # data frame of datasets to generate
 dataCombos <- cbind.data.frame(c(FALSE,FALSE,TRUE,TRUE,TRUE,TRUE,TRUE),
@@ -738,14 +738,6 @@ for (rowNum in 1:dim(dataCombos)[1]) {
   ggsave(paste0(figDir,"phase",sgePhase,"/",samplingDate,"/","sge2phase",sgePhase,"_",samplingDate,"_EloRank_v_IntroOrder_XYplot.png"),
          width = 6, height = 4)
   
-  #!#!# MOVE THIS LOWER, SAVE A COPY OF ALL THE DATA FOR COMPARISON
-  sge.behave.summary <- subset(sge.behave.summary, ID != "DV")
-  
-  # number of animals (in behavior measure)
-  numAnimals <- dim(sge.behave.summary)[1] + 1
-  # number of animals (in behavior measure, without DV2J)
-  numAnimalsNoDV2J <- dim(sge.behave.summary)[1]
-  
   #add experiment date
   sge.behave.summary$experimentDate <- NA
   #date the group was sampled
@@ -815,12 +807,23 @@ for (rowNum in 1:dim(dataCombos)[1]) {
     }
   }
   
+  # number of animals (in behavior measure)
+  numAnimals <- dim(sge.behave.summary)[1]
+  # number of animals (in behavior measure, without DV2J)
+  numAnimalsNoDV2J <- dim(sge.behave.summary)[1] - 1
   
-  #!#!# Need some code here to determine if animals were in/out of group long enough #!#!#
-  #this line currently calculates "days in clinic" (daysOut from file) over total group days between group start and experiment
+  #save data before dropping animals
+  write.table(x = sge.behave.summary,
+              file = paste0(outDir,"phase",sgePhase,"/",samplingDate,"/","sge2Behavior_phase",sgePhase,"_adj",samplingDate,"_allAnimals.txt"),
+              quote = FALSE, 
+              sep = ",")
+  #r objects
+  saveRDS(object = sge.behave.summary,
+              file = paste0(outDir,"phase",sgePhase,"/",samplingDate,"/","sge2Behavior_phase",sgePhase,"_adj",samplingDate,"_allAnimals.RDS"))
   
-  #individuals < 0.5 for this metric are guaranteed to have been in the group over half the time
-  #individuals > 0.5 i need to check WHEN the dates they missed were, so i need to import more thorough data
+  #drop DV2J
+  sge.behave.summary <- subset(sge.behave.summary, ID != "DV")
+  #individuals >= 0.5 fractTimeInGroup are kept for centering, others dropped
   sge.behave.summary <- subset(sge.behave.summary, fracTimeInGroup >= .5)
   
   sge.behave.summary$groupcent_groom <- 0
