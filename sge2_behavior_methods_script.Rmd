@@ -333,10 +333,7 @@ experimentDate - date of sampling for this animal
 ### grooming, agonisms received, & elo
 
 #example values
-adjustData <- TRUE ### section in the code exists to drop data by date, but i haven't implemented that here
-samplingDate <- "Vax" #or Vax or EnvChall
-sgePhase <- 1
-rowNum <- 3
+#rowNum <- 6
 
 # data frame of datasets to generate
 dataCombos <- cbind.data.frame(c(FALSE,FALSE,TRUE,TRUE,TRUE,TRUE,TRUE),
@@ -351,7 +348,6 @@ for (rowNum in 1:dim(dataCombos)[1]) {
   
   sge2dates <- get(x = paste0("sge2p",sgePhase,"dates"))
   
-  #print(rowNum)
   adjustData <- dataCombos$adjustData[rowNum]
   samplingDate <- dataCombos$samplingDate[rowNum]
   sgePhase <- dataCombos$sgePhase[rowNum]
@@ -364,9 +360,8 @@ for (rowNum in 1:dim(dataCombos)[1]) {
   if (sgePhase == 1) {
     dateDF <- sampleDates[colnames(sampleDates) %in% c("animal","group",paste0("date",samplingDate))]
   } else {
-    #dateDF <- subset(intro_all, phase == "SGE2")[,colnames(intro_all) %in% c("ID","group")]
-    dateDF <- samplingDates[!is.na(samplingDates$groupP2),c(1,7)]
-    colnames(dateDF)[which(colnames(dateDF) == "ID")] <- "animal"
+    dateDF <- samplingDates[!is.na(samplingDates$groupP2),
+                            which(colnames(samplingDates) %in% c("animal","groupP2"))]
     colnames(dateDF)[which(colnames(dateDF) == "groupP2")] <- "group"
     
     if (adjustData) {
@@ -381,8 +376,6 @@ for (rowNum in 1:dim(dataCombos)[1]) {
       
       colnames(dateDF)[which(colnames(dateDF) == "date")] <- paste0("date",samplingDate)
     }
-    #single animal was not in intro_all phase 2, exists in behavior data
-    #dateDF <- rbind(dateDF,c("Sd4","SPF1"))
   }
   
   if ( !adjustData ) {
@@ -399,7 +392,7 @@ for (rowNum in 1:dim(dataCombos)[1]) {
   
   #NSPF4 + DJ --> D2
   if ( sgePhase == 2 ) {
-    #there are 2 DJ's in phase 2, RDj7 in NSPF4 is "D2"
+    #there are 2 DJ's in phase 2, RDj7 in NSPF4 was labeled "D2" not "DJ"
     dateDF$twoLetter[which(dateDF$animal == "RDj7")] <- "D2"
   }
   
@@ -449,8 +442,7 @@ for (rowNum in 1:dim(dataCombos)[1]) {
     rownames(intro_phase) <- as.character(1:dim(intro_phase)[1])
   }
   
-  ### This code allows for the dates to be modified
-  
+  ### This code allows for the dates to be modified, to end observations at the time of sampling
   if ( adjustData == TRUE) {
     
     dateDF$fracKept <- 0
@@ -714,7 +706,7 @@ for (rowNum in 1:dim(dataCombos)[1]) {
   sge.behave.summary$rawGroomRate <- (sge.behave.summary$min / sge.behave.summary$num.obs ) * 2
   sge.behave.summary$rawAggRecRate <- (sge.behave.summary$agg.received / sge.behave.summary$num.obs ) * 2
   
-  #get ordinal rank before we drop DV2J
+  #get ordinal rank
   sge.behave.summary$calcOrdRank <- 0
   for (g in groupIDs) {
     groupOrdRank <- rank(-subset(sge.behave.summary, group.agg == g)$calcElo)
@@ -823,7 +815,7 @@ for (rowNum in 1:dim(dataCombos)[1]) {
   
   #drop DV2J
   sge.behave.summary <- subset(sge.behave.summary, ID != "DV")
-  #individuals >= 0.5 fractTimeInGroup are kept for centering, others dropped
+  #individuals who were in the group more than 50% of the time (fractTimeInGroup >= .5) are kept for centering, others dropped
   sge.behave.summary <- subset(sge.behave.summary, fracTimeInGroup >= .5)
   
   sge.behave.summary$groupcent_groom <- 0
@@ -858,8 +850,7 @@ for (rowNum in 1:dim(dataCombos)[1]) {
     }
   }
   
-  
-  ## cut down columns to bare minimum
+  ## cut down columns to minimum metadata (just raw behaviors, group centered behaviors, and animal/group ID)
   sge.behave.summary.full <- sge.behave.summary
   sge.behave.summary <- sge.behave.summary[,colnames(sge.behave.summary) %in% c("ID",
                                                                                 "phase.agg",
@@ -982,16 +973,19 @@ for (rowNum in 1:dim(dataCombos)[1]) {
 
 ```{r}
 
-sgePhase <- 1
-fullData <- read.table(file = paste0(outDir,"sge2Behavior_shortCols_phase",sgePhase,".txt"),
-                       sep = ",")
+adjDataCombos <- subset(dataCombos, adjustData)
+rowNum <- 1
 
 groupByGroup <- data.frame()
 
-for (samplingDate in c("SingleCell","Vax","EnvChall")) {
-  partialData <- read.table(file = paste0(outDir,"sge2Behavior_shortCols_phase",sgePhase,"_adj",samplingDate,".txt"),
-                            sep = ",")
+for (rowNum in 1:dim(adjDataCombos)[1]) {
   
+  samplingDate <- adjDataCombos$samplingDate[rowNum]
+  sgePhase <- adjDataCombos$sgePhase[rowNum]
+  
+  fullData <- readRDS(file = paste0(outDir,"phase",sgePhase,"/WholePhase/sge2Behavior_shortCols_phase",sgePhase,"_adjWholePhase.RDS"))
+  partialData <- readRDS(file = paste0(outDir,"phase",sgePhase,"/",samplingDate,"/sge2Behavior_shortCols_phase",sgePhase,"_adj",samplingDate,".RDS"))
+
   compareData <- merge(fullData,
                        partialData,
                        by = "animalID", suffixes = c(".full",".part"))
@@ -1044,18 +1038,48 @@ for (samplingDate in c("SingleCell","Vax","EnvChall")) {
          width = 6, height = 4)
 
     groupByGroup <- rbind.data.frame(groupByGroup,
-                                     unique(cbind.data.frame(compareData$fractionKept.part,compareData$group.part,compareData$adjDate.part)))
+                                     unique(cbind.data.frame(compareData$fractionKept.part,
+                                                             compareData$group.part,
+                                                             compareData$adjDate.part,
+                                                             compareData$phase.part)))
 }
 
-colnames(groupByGroup) <- c("obsKept","group","sampleDate")
+colnames(groupByGroup) <- c("obsKept","group","sampleDate","phase")
+
+#don't need _1 designation
+groupByGroup$group <- gsub(pattern = "_1", replacement = "", x = groupByGroup$group)
+
+#separate experiments by phase
+groupByGroup$expPhase <- paste0(groupByGroup$phase,"_",groupByGroup$sampleDate)
 
 ggplot(data = groupByGroup,
        aes(x = obsKept,
-           y = sampleDate)) +
+           y = expPhase)) +
   geom_violin(col = "white") +
   geom_jitter(aes(col = group), size = 3, width = 0, height = .1) +
   xlim(c(0,1))
 
-ggsave(paste0(figDir,"/phase",sgePhase,"/","groupByGroup_observations_by_samplingpoint.png"),
+ggsave(paste0(figDir,"/groupByGroup_observations_by_samplingpoint.png"),
          width = 6, height = 4)
 ```
+
+```{r animals dropped from GC}
+
+for (rowNum in 1:dim(dataCombos)[1]) {
+  samplingDate <- dataCombos$samplingDate[rowNum]
+  sgePhase <- dataCombos$sgePhase[rowNum]
+  
+  print(paste0("SGEII phase",sgePhase," exp:",samplingDate))
+  allAnimalMeta <- readRDS(file = paste0(outDir,"phase",sgePhase,"/",samplingDate,
+                                         "/sge2Behavior_phase",sgePhase,"_adj",samplingDate,"_allAnimals.RDS"))
+  
+  if (dim(subset(allAnimalMeta, fracTimeInGroup < .5))[1] == 0) {
+    print(paste0("        No Animals Dropped for 50% rule"))
+  } else {
+    print("        Dropped Animals:")
+    print(subset(allAnimalMeta, fracTimeInGroup < .5)$animalID)
+  }
+
+}
+```
+
