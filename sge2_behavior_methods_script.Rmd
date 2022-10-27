@@ -343,7 +343,8 @@ experimentDate - date of sampling for this animal
 ### grooming, agonisms received, & elo
 
 #example values
-#rowNum <- 5
+#check
+#rowNum <- 6
 
 # data frame of datasets to generate
 dataCombos <- cbind.data.frame(c(FALSE,FALSE,TRUE,TRUE,TRUE,TRUE,TRUE),
@@ -389,8 +390,18 @@ for (rowNum in 1:dim(dataCombos)[1]) {
   }
   
   if ( !adjustData ) {
-      dateDF$date <- max(sge2dates$date)
-  }
+     if (sgePhase == 1) {
+       dateDF$date <- max(max(samplingDates[,4], na.rm = TRUE),
+                           max(samplingDates[,5], na.rm = TRUE),
+                           max(samplingDates[,6], na.rm = TRUE)) + 30
+        } else {
+          dateDF$date <- max(max(samplingDates[,8], na.rm = TRUE),
+                             max(samplingDates[,9], na.rm = TRUE),
+                             max(samplingDates[,10], na.rm = TRUE),
+                             max(samplingDates[,11], na.rm = TRUE),
+                             max(samplingDates[,12], na.rm = TRUE)) + 30
+        }
+    }
   
   dateDF[,3] <- as.Date(dateDF[,3])
   
@@ -772,7 +783,7 @@ for (rowNum in 1:dim(dataCombos)[1]) {
   sge.behave.summary$daysOut <- 0
   sge.behave.summary$fracTimeInGroup <- 0
   
-  #i <- sge.behave.summary$ID[37]
+  #i <- sge.behave.summary$ID[7]
   
   for (i in sge.behave.summary$ID) {
     #print(i)
@@ -1090,7 +1101,6 @@ for (rowNum in 1:dim(dataCombos)[1]) {
     print("        Dropped Animals:")
     print(subset(allAnimalMeta, fracTimeInGroup < .5)$animalID)
   }
-
 }
 ```
 
