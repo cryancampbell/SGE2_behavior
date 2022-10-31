@@ -792,11 +792,13 @@ for (rowNum in 1:dim(dataCombos)[1]) {
   #i <- sge.behave.summary$ID[7]
   
   for (i in sge.behave.summary$ID) {
+    
     #print(i)
     if (i %in% dateDF$twoLetter) {
       dfDateRow <- which(dateDF$twoLetter == i)
       behaveRow <- which(sge.behave.summary$ID == i)
       
+
       sge.behave.summary$animalID[behaveRow] <- dateDF$animal[dfDateRow]
       sge.behave.summary$groupStart[behaveRow] <- dateDF$dateStart[dfDateRow]
       sge.behave.summary$groupStart[behaveRow] <- as.Date(sge.behave.summary$groupStart[behaveRow])
@@ -805,6 +807,13 @@ for (rowNum in 1:dim(dataCombos)[1]) {
                              Animal == sge.behave.summary$animalID[behaveRow])$Death == "yes") {
         sge.behave.summary$diedInPhase[behaveRow] <- TRUE
       }
+      
+      #doublecheck that the sge2 dates were loaded correctly, if not, reload them
+      #this term is checking that the animal's first day in the group matches the group's first date, if not it reloads sge2dates
+      if ( !head(subset(sge2dates, animal == sge.behave.summary$animalID[behaveRow] & event == "in"), n = 1)$date == sge.behave.summary$groupStart[behaveRow] ) {
+        sge2dates <- get(x = paste0("sge2p",sgePhase,"dates"))
+      }
+
       
       #check sge2dates for exact days out
       daysIn <- dim(subset(sge2dates, animal == sge.behave.summary$animalID[behaveRow] & 
