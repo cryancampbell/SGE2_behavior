@@ -39,6 +39,7 @@ id.group - column of ID_group<br>
 eloID - Individual two-letter ID<br>
 calcElo - Elo calculated from specified subset of data (pre-sample collection)<br>
 groupEloStab - group stability of calcElo<br>
+groupEloDCI - group directional consistency (via eloRating)<br>
 elo.groom - Elo from intro_all<br>
 min - minutes of grooming total<br>
 min.give - minutes of grooming given<br>

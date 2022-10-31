@@ -309,7 +309,8 @@ agg.received - count of agonisms received
 id.group - column of ID_group
 eloID - Individual two-letter ID
 calcElo - Elo calculated from specified subset of data (pre-sample collection)
-groupEloStab - group stability of calcElo
+groupEloStab - group stability of calcElo (via eloRating)
+groupEloDCI - group directional consistency (via eloRating)
 elo.groom - Elo from intro_all
 min - minutes of grooming total
 min.give - minutes of grooming given
@@ -344,7 +345,7 @@ experimentDate - date of sampling for this animal
 
 #example values
 #check
-#rowNum <- 6
+#rowNum <- 4
 
 # data frame of datasets to generate
 dataCombos <- cbind.data.frame(c(FALSE,FALSE,TRUE,TRUE,TRUE,TRUE,TRUE),
@@ -672,6 +673,7 @@ for (rowNum in 1:dim(dataCombos)[1]) {
   intro_sub$eloID <- ""
   intro_sub$calcElo <- 0
   intro_sub$groupEloStab <- 0
+  intro_sub$groupEloDCI <- 0
   
   ### Repeat For Each Group
   groupIDs <- names(dominance)
@@ -707,7 +709,11 @@ for (rowNum in 1:dim(dataCombos)[1]) {
       
       groupStab <- stab_elo(elo)
       
+      dciMat <- creatematrix(eloobject = elo,daterange = NULL,drawmethod = "omit",onlyinteracting = FALSE,draw = NULL)
+      groupDCI <- DCindex(dciMat)
+      
       intro_sub$groupEloStab[which(intro_sub$group == g)] <- groupStab
+      intro_sub$groupEloDCI[which(intro_sub$group == g)] <- groupDCI
       
       for (i in names(eloVals)) {
         eloNum <- which(names(eloVals) == i)
@@ -961,6 +967,18 @@ for (rowNum in 1:dim(dataCombos)[1]) {
   # number of animals (in group centering)
   numAnimalsGC <- length(unique(sge.behave.summary.full$animalID))
   
+  stabDF <- unique(sge.behave.summary.full[,colnames(sge.behave.summary.full) %in% c("groupEloStab","group.agg")])
+  # average Stability
+  meanStab <- mean(stabDF$groupEloStab)
+  # stdev stability
+  sdStab <- sd(stabDF$groupEloStab)
+  
+  dciDF <- unique(sge.behave.summary.full[,colnames(sge.behave.summary.full) %in% c("groupEloDCI","group.agg")])
+  # average directional consistency
+  meanDCI <- mean(dciDF$groupEloDCI)
+  # stdev directional consistency
+  sdDCI <- sd(dciDF$groupEloDCI)
+  
   #generate output
   ## text files
   write.table(x = sge.behave.summary.full,
@@ -986,7 +1004,10 @@ for (rowNum in 1:dim(dataCombos)[1]) {
                paste0("animals w/o DV2J = ",numAnimalsNoDV2J),
                paste0("animals in Group Centering = ",numAnimalsGC),
                paste0("Ordinal Rank ~ Introduction Number: R = ",rIntroElo),
-               paste0("Ordinal Rank ~ Introduction Number: p = ",pIntroElo)), methodsOut)
+               paste0("Mean Group Stability = ",meanStab),
+               paste0("StDev Group Stability = ",sdStab),
+               paste0("Mean Group Directional Consistency = ",meanDCI),
+               paste0("StDev Group Directional Consistency = ",sdDCI)),methodsOut)
   close(methodsOut)
 }
 ```
@@ -1110,7 +1131,8 @@ for (rowNum in 1:dim(dataCombos)[1]) {
 #group-intro order comparison for NSPF4/phase 1
 allAnimalMeta <- readRDS(file = paste0(outDir,"phase",sgePhase,"/",samplingDate,
                                          "/sge2Behavior_phase",sgePhase,"_adj",samplingDate,"_allAnimals.RDS"))
-
+sgePhase <- 1
+samplingDate <- "Vax"
 gcAnimalMeta <- readRDS(file = paste0(outDir,"phase",sgePhase,"/",samplingDate,
                                          "/sge2Behavior_phase",sgePhase,"_adj",samplingDate,".RDS"))
 
@@ -1123,5 +1145,11 @@ ggplot(data = gcAnimalMeta,
 
 subset(gcAnimalMeta, group.agg == "NSPF4_1")
 
+sgePhase <- 1
+samplingDate <- "Vax"
+gcAnimalMeta <- readRDS(file = paste0(outDir,"phase",sgePhase,"/",samplingDate,
+                                         "/sge2Behavior_phase",sgePhase,"_adj",samplingDate,".RDS"))
+
+subset(gcAnimalMeta, group.agg == "NSPF5_1")$groupcent_agRec
 ```
 
