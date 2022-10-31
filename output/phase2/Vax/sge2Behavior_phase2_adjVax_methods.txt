@@ -3,6 +3,9 @@ Sample Date: Vax
 Observation Hours: 97.5
 animals = 46
 animals w/o DV2J = 45
-animals in Group Centering = 43
+animals in Group Centering = 40
 Ordinal Rank ~ Introduction Number: R = -0.42111898605175
-Ordinal Rank ~ Introduction Number: p = 0.00356330277988911
+Mean Group Stability = 0.99693
+StDev Group Stability = 0.00251221460512876
+Mean Group Directional Consistency = 0.972772713257332
+StDev Group Directional Consistency = 0.0681808883441118
