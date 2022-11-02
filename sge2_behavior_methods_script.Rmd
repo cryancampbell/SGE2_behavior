@@ -345,7 +345,7 @@ experimentDate - date of sampling for this animal
 
 #example values
 #check
-#rowNum <- 4
+#rowNum <- 3
 
 # data frame of datasets to generate
 dataCombos <- cbind.data.frame(c(FALSE,FALSE,TRUE,TRUE,TRUE,TRUE,TRUE),
@@ -358,11 +358,16 @@ for (rowNum in 1:dim(dataCombos)[1]) {
   
   print(rowNum)
   
-  sge2dates <- get(x = paste0("sge2p",sgePhase,"dates"))
-  
   adjustData <- dataCombos$adjustData[rowNum]
   samplingDate <- dataCombos$samplingDate[rowNum]
   sgePhase <- dataCombos$sgePhase[rowNum]
+
+  #sge2dates <- get(x = paste0("sge2p",sgePhase,"dates"))
+  if ( sgePhase == 1 ) {
+    sge2dates <- sge2p1dates
+  } else {
+    sge2dates <- sge2p2dates
+  }
   
   dir.create(paste0(figDir,"phase",sgePhase))
   dir.create(paste0(figDir,"phase",sgePhase,"/",samplingDate))
@@ -966,8 +971,14 @@ for (rowNum in 1:dim(dataCombos)[1]) {
   groupIDs <- unique(sge.behave.summary.full$group.agg)
   groupObs <- vector()
   #get the number of observation periods for each group
+  
   for (g in groupIDs) {
-    groupObs <- c(groupObs,max(subset(sge.behave.summary.full, group.agg == g)$num.obs))
+    #groupObs <- c(groupObs,max(subset(sge.behave.summary.full, group.agg == g)$num.obs))
+    if (sgePhase == 1) {
+      groupObs <- c(groupObs,max(subset(dateDF, group_1 == g)$numObs))
+    } else {
+      groupObs <- c(groupObs,max(subset(dateDF, group == g)$numObs))
+    }
   }
   #an observation period is 30 mins, so the total hours of obs = sum(group obs periods) / 2
   obsHours <- sum(groupObs) / 2
@@ -1013,6 +1024,7 @@ for (rowNum in 1:dim(dataCombos)[1]) {
                paste0("animals w/o DV2J = ",numAnimalsNoDV2J),
                paste0("animals in Group Centering = ",numAnimalsGC),
                paste0("Ordinal Rank ~ Introduction Number: R = ",rIntroElo),
+               paste0("Ordinal Rank ~ Introduction Number: p = ",pIntroElo),
                paste0("Mean Group Stability = ",meanStab),
                paste0("StDev Group Stability = ",sdStab),
                paste0("Mean Group Directional Consistency = ",meanDCI),
