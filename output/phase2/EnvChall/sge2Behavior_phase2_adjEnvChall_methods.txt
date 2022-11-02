@@ -1,10 +1,11 @@
 SGEII Phase 2
 Sample Date: EnvChall
-Observation Hours: 97.5
+Observation Hours: 48
 animals = 46
 animals w/o DV2J = 45
 animals in Group Centering = 43
 Ordinal Rank ~ Introduction Number: R = -0.474443023487714
+Ordinal Rank ~ Introduction Number: p = 0.000864837500204403
 Mean Group Stability = 0.99518
 StDev Group Stability = 0.00494228916821165
 Mean Group Directional Consistency = 0.993853281307523
