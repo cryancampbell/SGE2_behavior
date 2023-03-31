@@ -1189,10 +1189,24 @@ groupP2 <- vector()
 ordRankP1 <- vector()
 ordRankP2 <- vector()
 totObs <- vector()
+p1Obs <- vector()
+p2Obs <- vector()
 totAggRec <- vector()
 totGroomMin <- vector()
 totGroomMinGive <- vector()
 totGroomMinReceive <- vector()
+rawAgRecP1 <- vector()
+rawAgRecP2 <- vector()
+rawEloP1 <- vector()
+rawEloP2 <- vector()
+rawGroomP1 <- vector()
+rawGroomP2 <- vector()
+gcAgRecP1 <- vector()
+gcAgRecP2 <- vector()
+gcEloP1 <- vector()
+gcEloP2 <- vector()
+gcGroomP1 <- vector()
+gcGroomP2 <- vector()
 
 for (i in ID) {
   p1sub <- subset(p1All, ID == i)
@@ -1204,10 +1218,24 @@ for (i in ID) {
   ordRankP1 <- c(ordRankP1, p1sub$ordinal.rank)
   ordRankP2 <- c(ordRankP2, p2sub$ordinal.rank)
   totObs <- c(totObs, p1sub$no.obs + p2sub$no.obs)
+  p1Obs <- c(p1Obs, p1sub$no.obs)
+  p2Obs <- c(p2Obs, p2sub$no.obs)
   totAggRec <- c(totAggRec, p1sub$agg.received + p2sub$agg.received)
   totGroomMin <- c(totGroomMin, p1sub$min + p2sub$min)
   totGroomMinGive <- c(totGroomMinGive, p1sub$min.give + p2sub$min.give)
   totGroomMinReceive <- c(totGroomMinReceive, p1sub$min.receive + p2sub$min.receive)
+  rawAgRecP1 <- c(rawAgRecP1,p1sub$rawAggRecRate)
+  rawAgRecP2 <- c(rawAgRecP2,p2sub$rawAggRecRate)
+  rawEloP1   <- c(rawEloP1,p1sub$calcElo)
+  rawEloP2   <- c(rawEloP2,p2sub$calcElo)
+  rawGroomP1 <- c(rawGroomP1,p1sub$rawGroomRate)
+  rawGroomP2 <- c(rawGroomP2,p2sub$rawGroomRate)
+  gcAgRecP1  <- c(gcAgRecP1,p1sub$groupcent_agRec)
+  gcAgRecP2  <- c(gcAgRecP2,p2sub$groupcent_agRec)
+  gcEloP1    <- c(gcEloP1,p1sub$groupcent_elo)
+  gcEloP2    <- c(gcEloP2,p2sub$groupcent_elo)
+  gcGroomP1  <- c(gcGroomP1,p1sub$groupcent_groom)
+  gcGroomP2  <- c(gcGroomP2,p2sub$groupcent_groom)
 }
 
 comboP1P2 <- cbind.data.frame(ID,
@@ -1217,15 +1245,63 @@ comboP1P2 <- cbind.data.frame(ID,
                                ordRankP1,
                                ordRankP2,
                                totObs,
+                              p1Obs,
+                              p2Obs,
                                totAggRec,
                                totGroomMin,
                                totGroomMinGive,
-                               totGroomMinReceive)
+                               totGroomMinReceive,
+                              rawAgRecP1,
+                              rawAgRecP2,
+                              rawEloP1,
+                              rawEloP2,
+                              rawGroomP1,
+                              rawGroomP2,
+                              gcAgRecP1,
+                              gcAgRecP2,
+                              gcEloP1,
+                              gcEloP2,
+                              gcGroomP1,
+                              gcGroomP2)
 
-comboP1P2$rawGroomRate <- 2 * (comboP1P2$totGroomMin / comboP1P2$totObs)
-comboP1P2$rawAggRecRate <- 2 * (comboP1P2$totAggRec / comboP1P2$totObs)
+comboP1P2$rawCombinedGroomRate <- 2 * (comboP1P2$totGroomMin / comboP1P2$totObs)
+comboP1P2$rawCombinedAggRecRate <- 2 * (comboP1P2$totAggRec / comboP1P2$totObs)
+
+comboP1P2$percentP1Obs <- comboP1P2$p1Obs / comboP1P2$totObs
+
+comboP1P2$gcCombinedAggRecRate <- comboP1P2$gcAgRecP1 * comboP1P2$percentP1Obs + comboP1P2$gcAgRecP2 * (1 - comboP1P2$percentP1Obs)
+comboP1P2$gcCombinedGroomRate <- comboP1P2$gcGroomP1 * comboP1P2$percentP1Obs + comboP1P2$gcGroomP2 * (1 - comboP1P2$percentP1Obs)
+comboP1P2$gcCombinedElo <- comboP1P2$gcEloP1 * comboP1P2$percentP1Obs + comboP1P2$gcEloP2 * (1 - comboP1P2$percentP1Obs)
 
 saveRDS(object = comboP1P2,
         file = paste0(outDir,"/","sge2Behavior_phase1and2_combinedBehaviors.RDS"))
+
+write.table(x = comboP1P2,
+              file = paste0(outDir,"/","sge2Behavior_phase1and2_combinedBehaviors.txt"),
+              quote = FALSE, 
+              sep = ",")
+
+ggplot(data = p1All,
+       aes(x = rawAggRecRate,
+           y = groupcent_agRec)) +
+  geom_point()
+
+ggplot(data = p2Vax,
+       aes(x = rawAggRecRate,
+           y = groupcent_agRec,
+           col = group.agg)) +
+  geom_point()
+
+ggplot() +
+  geom_point(aes(x = comboP1P2$rawCombinedGroomRate,
+           y = comboP1P2$rawGroomP1 * comboP1P2$percentP1Obs + comboP1P2$rawGroomP2 * (1 - comboP1P2$percentP1Obs))) +
+  xlab("groom calculated from total events / total obs (p1 + p2)") +
+  ylab("groom calculated from weighted average of p1 and p2")
+
+ggplot() +
+  geom_point(aes(x = comboP1P2$rawCombinedAggRecRate,
+           y = comboP1P2$rawAgRecP1 * comboP1P2$percentP1Obs + comboP1P2$rawAgRecP2 * (1 - comboP1P2$percentP1Obs))) +
+  xlab("agRec calculated from total events / total obs (p1 + p2)") +
+  ylab("agRec calculated from weighted average of p1 and p2")
 ```
 
