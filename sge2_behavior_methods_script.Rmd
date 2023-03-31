@@ -1174,3 +1174,58 @@ gcAnimalMeta <- readRDS(file = paste0(outDir,"phase",sgePhase,"/",samplingDate,
 subset(gcAnimalMeta, group.agg == "NSPF5_1")$groupcent_agRec
 ```
 
+```{r combine Phase 1 and Phase 2}
+### use vaccine date in phase 2
+### only calculate for animals that were 
+p1All <- readRDS(paste0(outDir,"phase1/WholePhase/sge2Behavior_phase1_adjWholePhase.RDS"))
+p2Vax <- readRDS(paste0(outDir,"phase2/Vax/sge2Behavior_phase2_adjVax.RDS"))
+
+ID <- p2Vax$ID[p2Vax$ID %in% p1All$ID]
+
+## data
+animalID <- vector()
+groupP1 <- vector()
+groupP2 <- vector()
+ordRankP1 <- vector()
+ordRankP2 <- vector()
+totObs <- vector()
+totAggRec <- vector()
+totGroomMin <- vector()
+totGroomMinGive <- vector()
+totGroomMinReceive <- vector()
+
+for (i in ID) {
+  p1sub <- subset(p1All, ID == i)
+  p2sub <- subset(p2Vax, ID == i)
+  
+  animalID <- c(animalID, p1sub$animalID)
+  groupP1 <- c(groupP1, p1sub$group.gc)
+  groupP2 <- c(groupP2, p2sub$group.gc)
+  ordRankP1 <- c(ordRankP1, p1sub$ordinal.rank)
+  ordRankP2 <- c(ordRankP2, p2sub$ordinal.rank)
+  totObs <- c(totObs, p1sub$no.obs + p2sub$no.obs)
+  totAggRec <- c(totAggRec, p1sub$agg.received + p2sub$agg.received)
+  totGroomMin <- c(totGroomMin, p1sub$min + p2sub$min)
+  totGroomMinGive <- c(totGroomMinGive, p1sub$min.give + p2sub$min.give)
+  totGroomMinReceive <- c(totGroomMinReceive, p1sub$min.receive + p2sub$min.receive)
+}
+
+comboP1P2 <- cbind.data.frame(ID,
+                               animalID,
+                               groupP1,
+                               groupP2,
+                               ordRankP1,
+                               ordRankP2,
+                               totObs,
+                               totAggRec,
+                               totGroomMin,
+                               totGroomMinGive,
+                               totGroomMinReceive)
+
+comboP1P2$rawGroomRate <- 2 * (comboP1P2$totGroomMin / comboP1P2$totObs)
+comboP1P2$rawAggRecRate <- 2 * (comboP1P2$totAggRec / comboP1P2$totObs)
+
+saveRDS(object = comboP1P2,
+        file = paste0(outDir,"/","sge2Behavior_phase1and2_combinedBehaviors.RDS"))
+```
+
