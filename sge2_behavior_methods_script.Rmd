@@ -1305,3 +1305,46 @@ ggplot() +
   ylab("agRec calculated from weighted average of p1 and p2")
 ```
 
+
+Updates -- Sept 2025
+-What were the dates used to calculate elo?
+```{r}
+#phase 1
+#start date
+sge2p1start <- sge2p1dates %>%
+  dplyr::filter(event == "in") %>%
+  dplyr::group_by(group) %>%
+  dplyr::summarize(start = min(date))
+
+#vax date
+sge2p1vax <- sge2p1dates %>%
+  dplyr::select(-animal) %>%
+  dplyr::filter(event == "vaccine") %>%
+  dplyr::arrange(group) %>%
+  dplyr::distinct()
+
+sge2p1start %>%
+  dplyr::left_join(sge2p1vax, by = "group") %>%
+  dplyr::select(-event) %>%
+  dplyr::rename(end = date)
+
+#phase 2
+#start date
+sge2p2start <- sge2p2dates %>%
+  dplyr::filter(event == "in") %>%
+  dplyr::group_by(group) %>%
+  dplyr::summarize(start = min(date))
+
+#vax date
+sge2p2vax <- sge2p2dates %>%
+  dplyr::select(-animal) %>%
+  dplyr::filter(event == "vaccine") %>%
+  dplyr::arrange(group) %>%
+  dplyr::distinct()
+
+sge2p2start %>%
+  dplyr::left_join(sge2p2vax, by = "group") %>%
+  dplyr::select(-event) %>%
+  dplyr::rename(end = date)
+
+```
