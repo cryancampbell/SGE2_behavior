@@ -10,3 +10,10 @@ Mean Group Stability = 0.99518
 StDev Group Stability = 0.00494228916821165
 Mean Group Directional Consistency = 0.993853281307523
 StDev Group Directional Consistency = 0.00895767291406575
+Starting Elo ~ Ending Elo: R = 0.90766007935207
+Starting Elo ~ Ending Elo: p = 3.36834839375903e-18
+Average Time Grooming 'Down' (dropping 1's and 5's) = 21.5066923076923
+Average Time Grooming 'Up' (dropping 1's and 5's) = 31.5606896551724
+Paired Grooming T-Test (Up - Down, positive means more grooming 'Up'): t = 1.79518027539857
+Paired Grooming T-Test: p = 0.0847249004972398
+we tested if females who were adjacent in rank were more likely to groom together. for a binary pattern (groomed at all versus never groomed:βrank_disparity = -1.1022915428262,  Z = -4.82538254246681,  N = 170 dyads,P = 1.39734797708882e-06), or the proportion of total grooming time that a female invested in a grooming partner, pGroom total,in those dyads that groomed at least once (βrank_disparity = -0.0533217086964229, N = 128 dyads,P = 0.109148376494198

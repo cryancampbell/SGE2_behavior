@@ -6,7 +6,14 @@ animals w/o DV2J = 48
 animals in Group Centering = 48
 Ordinal Rank ~ Introduction Number: R = -0.5216066445377
 Ordinal Rank ~ Introduction Number: p = 0.000121364515126751
-Mean Group Stability = 0.99
-StDev Group Stability = 0.00999110715697828
+Mean Group Stability = 0.99032
+StDev Group Stability = 0.0101618895880638
 Mean Group Directional Consistency = 0.965565060884684
 StDev Group Directional Consistency = 0.0951188088569666
+Starting Elo ~ Ending Elo: R = 0.914726918900544
+Starting Elo ~ Ending Elo: p = 4.01946392775988e-20
+Average Time Grooming 'Down' (dropping 1's and 5's) = 19.4466206896552
+Average Time Grooming 'Up' (dropping 1's and 5's) = 35.3460666666667
+Paired Grooming T-Test (Up - Down, positive means more grooming 'Up'): t = 2.30976945125919
+Paired Grooming T-Test: p = 0.0284898191033753
+we tested if females who were adjacent in rank were more likely to groom together. for a binary pattern (groomed at all versus never groomed:βrank_disparity = -0.754184104946635,  Z = -3.65942485604052,  N = 192 dyads,P = 0.000252781952175796), or the proportion of total grooming time that a female invested in a grooming partner, pGroom total,in those dyads that groomed at least once (βrank_disparity = -0.0258300591181374, N = 150 dyads,P = 0.369107723030856
