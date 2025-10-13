@@ -1155,7 +1155,7 @@ for (rowNum in 1:dim(dataCombos)[1]) {
                paste0("Mean Group Stability = ",meanStab),
                paste0("StDev Group Stability = ",sdStab),
                paste0("Mean Group Directional Consistency = ",meanDCI),
-               paste0("StDev Group Directional Consistency = ",sdDCI)),
+               paste0("StDev Group Directional Consistency = ",sdDCI),
                paste0("Starting Elo ~ Ending Elo: R = ",elo_start_stop_R),
                paste0("Starting Elo ~ Ending Elo: p = ",elo_start_stop_p),
                paste0("Average Time Grooming 'Down' (dropping 1's and 5's) = ",mean(groom_by_up_down$down, na.rm = T)),
@@ -1167,8 +1167,8 @@ for (rowNum in 1:dim(dataCombos)[1]) {
                       ",  Z = ",z_rank_disp,",  N = ",nrow(groom.tot)," dyads,",
                       "P = ",p_rank_disp,"), or the proportion of total grooming time that a female invested in a grooming partner, pGroom total,",
                       "in those dyads that groomed at least once (βrank_disparity = ",beta_rank_disp_proptime,", N = ",nrow(df_groomed)," dyads,",
-                      "P = ",p_rank_disp_proptime),
-               methodsOut)
+                      "P = ",p_rank_disp_proptime)),
+             con = methodsOut)
   close(methodsOut)
 }
 ```
