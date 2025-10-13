@@ -13,6 +13,8 @@ library(viridis)
 library(cowplot)
 library(grid)
 library(EloRating)
+library(dplyr)
+library(lme4)
 
 workDir <- getwd()
 dataDir <- paste0(workDir,"/data/")
@@ -677,6 +679,8 @@ for (rowNum in 1:dim(dataCombos)[1]) {
   ### Elo Function
   intro_sub$eloID <- ""
   intro_sub$calcElo <- 0
+  intro_sub$eloIDStart <- ""
+  intro_sub$calcEloStart <- 0
   intro_sub$groupEloStab <- 0
   intro_sub$groupEloDCI <- 0
   
@@ -707,10 +711,34 @@ for (rowNum in 1:dim(dataCombos)[1]) {
       groupDom <- groupDom[order(groupDom$Date),]
       
       #only distinct interactions
-      groupDomElo <- subset(groupDom, Winner != Loser)
+      groupDomElo <- subset(groupDom, Winner != Loser) |> 
+                        dplyr::filter(Winner != "oo") |>
+                        dplyr::filter(Winner != "H%")
       elo <- elo.seq(groupDomElo$Winner,groupDomElo$Loser,groupDomElo$Date)
       eloVals <- extract_elo(elo)
       names(eloVals) <- toupper(names(eloVals))
+      
+      #pull start date
+      g_only <- gsub("_.*", "", g)
+      stDate <- dateDF |> dplyr::filter(group == g_only) |> dplyr::pull(dateStart) |> max()
+      
+      #starting Elo, either "start" or first 3 obs, whichever is longer
+      #by date
+      groupDomEloStartDate <- groupDomElo |> dplyr::filter(Date <= stDate)
+      #by n obs
+      firstThree <- groupDomElo |> dplyr::group_by(Date) |> dplyr::pull(Date) |> unique() |> head(n=3)
+      groupDomEloStartObs <- groupDomElo |> dplyr::filter(Date %in% firstThree)
+      
+      if (nrow(groupDomEloStartDate) >= nrow(groupDomEloStartObs)) {
+        groupDomEloStart <- groupDomEloStartDate
+      } else {
+        groupDomEloStart <- groupDomEloStartObs
+      }
+      
+      eloStart <- elo.seq(groupDomEloStart$Winner, groupDomEloStart$Loser, groupDomEloStart$Date)
+      eloValStart <- extract_elo(eloStart)
+      names(eloValStart) <- toupper(names(eloValStart))
+      
       
       groupStab <- stab_elo(elo)
       
@@ -724,9 +752,22 @@ for (rowNum in 1:dim(dataCombos)[1]) {
         eloNum <- which(names(eloVals) == i)
         intro_sub$calcElo[which(intro_sub$ID == i)] <- eloVals[eloNum]
         intro_sub$eloID[which(intro_sub$ID == i)] <- names(eloVals)[eloNum]
+        
+        if (i %in% names(eloValStart)) {
+        eloNumStart <- which(names(eloValStart) == i)
+        intro_sub$calcEloStart[which(intro_sub$ID == i)] <- eloValStart[eloNumStart]
+        intro_sub$eloIDStart[which(intro_sub$ID == i)] <- names(eloValStart)[eloNumStart]
+        } else {
+        intro_sub$calcEloStart[which(intro_sub$ID == i)] <- 1000
+        intro_sub$eloIDStart[which(intro_sub$ID == i)] <- i
+        }
       }
     }
   }
+  
+  elo_start_stop_R <- cor.test(intro_sub$calcElo, intro_sub$calcEloStart)$estimate
+  elo_start_stop_p <- cor.test(intro_sub$calcElo, intro_sub$calcEloStart)$p.value
+
   
   ### Combine and Output Data
   sge.behave.summary <- merge(intro_sub,
@@ -998,7 +1039,93 @@ for (rowNum in 1:dim(dataCombos)[1]) {
   meanDCI <- mean(dciDF$groupEloDCI)
   # stdev directional consistency
   sdDCI <- sd(dciDF$groupEloDCI)
+
   
+  ### Oct 2025 updates
+  ### use groom.tot to do a t-test of grooming up or down the hierarchy
+  #ID1 Groom Min is grooming of ID1 -> ID2
+  #step 1 is drop the 1's and 5's
+  groom_ttest <- groom.tot |>
+    dplyr::filter(ID1.ord.rank %in% c(2,3,4)) |>
+    dplyr::mutate(groom_dir = ifelse(ID1.ord.rank > ID2.ord.rank, "up", "down")) |>
+    dplyr::group_by(ID1, groom_dir) |>
+    dplyr::summarize(tot_min = sum(min)) |>
+    pivot_wider(names_from = groom_dir, 
+              values_from = tot_min) %>%
+  {t.test(.$up, .$down, paired = TRUE)}
+  
+  groom_by_up_down <- groom.tot |>
+    dplyr::filter(ID1.ord.rank %in% c(2,3,4)) |>
+    dplyr::mutate(groom_dir = ifelse(ID1.ord.rank > ID2.ord.rank, "up", "down")) |>
+    dplyr::group_by(ID1, groom_dir) |>
+    dplyr::summarize(tot_min = sum(min)) |>
+    pivot_wider(names_from = groom_dir, 
+              values_from = tot_min)
+  
+  mean(groom_by_up_down$down, na.rm = T)
+  mean(groom_by_up_down$up, na.rm = T)
+  
+  ### test the grooming of adjacent animals
+  groom.tot$group <- as.factor(groom.tot$group)
+  # Prepare the data
+  groom.tot <- groom.tot %>%
+    mutate(
+      # Calculate rank disparity (absolute difference in ranks)
+      rank_disparity = abs(ID1.ord.rank - ID2.ord.rank),
+      
+      # Test 1: Binary outcome - did they groom at all?
+      groomed_binary = ifelse(bouts > 0, 1, 0),
+      
+      # Test 2: Proportion of total grooming time
+      # First calculate total grooming time across all dyads for each individual
+      # This is a bit complex - we'll do it in steps below
+    )
+  
+  # For Test 2, we need to calculate the proportion of grooming time
+  # Option 1: Proportion within this specific dyad (simpler interpretation)
+  groom.tot <- groom.tot %>%
+  group_by(ID1) %>%
+  mutate(
+    total_ID1_groom_min = sum(ID1.groom.min, na.rm = TRUE),
+    prop_groom = ifelse(total_ID1_groom_min > 0, 
+                        ID1.groom.min / total_ID1_groom_min, 
+                        0)
+  ) %>%
+  ungroup()
+  
+  # TEST 1: Logistic regression for binary grooming (groomed vs never groomed)
+  model1 <- glm(groomed_binary ~ rank_disparity + group, 
+                data = groom.tot, 
+                family = binomial(link = "logit"))
+  
+  summary(model1)
+  
+  # To get Z-statistic and p-value specifically for rank_disparity:
+  coef_summary1 <- summary(model1)$coefficients
+  print(coef_summary1["rank_disparity", ])
+  beta_rank_disp <- coef_summary1[2,1]
+  z_rank_disp <- coef_summary1[2,3]
+  p_rank_disp <- coef_summary1[2,4] 
+  
+  
+  # TEST 2: Linear model for proportion of grooming time
+  df_groomed <- groom.tot %>% filter(groomed_binary == 1)
+  
+  # Linear model with group as fixed effect
+  model2 <- lm(prop_groom ~ rank_disparity + group, 
+               data = df_groomed)
+  
+  summary(model2)
+  
+  # To get t-statistic and p-value specifically for rank_disparity:
+  coef_summary2 <- summary(model2)$coefficients
+  print(coef_summary2["rank_disparity", ])
+  beta_rank_disp_proptime <- coef_summary2[2,1]
+  z_rank_disp_proptime <- coef_summary2[2,3]
+  p_rank_disp_proptime <- coef_summary2[2,4] 
+  
+  
+    
   #generate output
   ## text files
   write.table(x = sge.behave.summary.full,
@@ -1028,7 +1155,20 @@ for (rowNum in 1:dim(dataCombos)[1]) {
                paste0("Mean Group Stability = ",meanStab),
                paste0("StDev Group Stability = ",sdStab),
                paste0("Mean Group Directional Consistency = ",meanDCI),
-               paste0("StDev Group Directional Consistency = ",sdDCI)),methodsOut)
+               paste0("StDev Group Directional Consistency = ",sdDCI)),
+               paste0("Starting Elo ~ Ending Elo: R = ",elo_start_stop_R),
+               paste0("Starting Elo ~ Ending Elo: p = ",elo_start_stop_p),
+               paste0("Average Time Grooming 'Down' (dropping 1's and 5's) = ",mean(groom_by_up_down$down, na.rm = T)),
+               paste0("Average Time Grooming 'Up' (dropping 1's and 5's) = ",mean(groom_by_up_down$up, na.rm = T)),
+               paste0("Paired Grooming T-Test (Up - Down, positive means more grooming 'Up'): t = ",groom_ttest$statistic),
+               paste0("Paired Grooming T-Test: p = ",groom_ttest$p.value),
+               paste0("we tested if females who were adjacent in rank were more likely to groom together. for a binary pattern (groomed at all versus never groomed:",
+                      "βrank_disparity = ",beta_rank_disp,
+                      ",  Z = ",z_rank_disp,",  N = ",nrow(groom.tot)," dyads,",
+                      "P = ",p_rank_disp,"), or the proportion of total grooming time that a female invested in a grooming partner, pGroom total,",
+                      "in those dyads that groomed at least once (βrank_disparity = ",beta_rank_disp_proptime,", N = ",nrow(df_groomed)," dyads,",
+                      "P = ",p_rank_disp_proptime),
+               methodsOut)
   close(methodsOut)
 }
 ```
@@ -1348,3 +1488,31 @@ sge2p2start %>%
   dplyr::rename(end = date)
 
 ```
+
+- rank hierarchies were linear and stable: 
+correlation elo after group formation vs end of vaccine experiment (for phases 1 and 2)
+
+```{r}
+
+
+
+```
+
+
+- grooming interactions were more frequent between adjacently ranked animals: 
+I found this in one of the papers but not sure how to calculate: "we found that females who were adjacent in rank were more likely to groom together. This pattern was detectable whether we tested for a binary pattern (groomed at all versus never groomed: βrank_disparity = −1.53,  Z = −4.94,  N = 360 dyads, P = 9.38 × 10−7), or whether we investigated the proportion of total grooming time that a female invested in a grooming partner, pGroom total, in those dyads that groomed at least once (βrank_disparity = −0.43, t310.0 = −7.06, N = 318 dyads, P = 1.09 × 10−11; Fig. 3)". 
+
+```{r}
+
+```
+
+- grooming was biased towards grooming up the status hierarchy:  
+subset 2nd, 3rd and 4th rank females; calculate mean rate of grooming higher-ranking females vs mean rate of grooming lower-ranking females; paired t test
+
+```{r}
+
+```
+
+
+
+
