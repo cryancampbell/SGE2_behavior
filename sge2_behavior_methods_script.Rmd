@@ -630,7 +630,13 @@ for (rowNum in 1:dim(dataCombos)[1]) {
     tmp.group <- cbind(tmp.group,subset(tmp, tmp$ID1 == i)$group[1])
   }  
   
-  sge.groom.rate.df <- as.data.frame(t(rbind(tmp.names,tmp.ranks,tmp.minutes,tmp.minutes.give,tmp.minutes.receive,tmp.obs,tmp.group)))
+  sge.groom.rate.df <- as.data.frame(t(rbind(tmp.names,
+                                             tmp.ranks,
+                                             tmp.minutes,
+                                             tmp.minutes.give,
+                                             tmp.minutes.receive,
+                                             tmp.obs,
+                                             tmp.group)))
   names(sge.groom.rate.df) <- c('ID','elo','min','min.give','min.receive','no.obs','group')
   sge.groom.rate.df <- na.omit(sge.groom.rate.df)
   sge.groom.rate.df$elo <- as.numeric(as.character(sge.groom.rate.df$elo))
@@ -786,11 +792,22 @@ for (rowNum in 1:dim(dataCombos)[1]) {
     sge.behave.summary$calcOrdRank[which(sge.behave.summary$group.agg == g)] <- groupOrdRank
   }
   
-  # R of order of intro ~ order of Elo
-  rIntroElo <- cor.test(sge.behave.summary$calcElo, sge.behave.summary$intro.no)$estimate
-  # p of order of intro ~ order of Elo
-  pIntroElo <- cor.test(sge.behave.summary$calcElo, sge.behave.summary$intro.no)$p.value
+  sge.behave.summary <- sge.behave.summary %>%
+                          group_by(group.agg) %>%
+                          mutate(finalRank = rank(-calcElo, ties.method = "min")) %>%
+                          ungroup()
   
+  # R of order of intro ~ order of Elo
+  rFinalElo <- cor.test(sge.behave.summary$calcElo, sge.behave.summary$finalRank)$estimate
+  # p of order of intro ~ order of Elo
+  pFinalElo <- cor.test(sge.behave.summary$calcElo, sge.behave.summary$finalRank)$p.value
+
+  # R of final order ~ Elo
+  rIntroElo <- cor.test(sge.behave.summary$calcElo, sge.behave.summary$ordinal.rank)$estimate
+  # p of final order ~ Elo
+  pIntroElo <- cor.test(sge.behave.summary$calcElo, sge.behave.summary$ordinal.rank)$p.value
+
+    
   ggplot(data = sge.behave.summary,
          aes(x = intro.no,
              y = calcElo)) +
@@ -802,6 +819,9 @@ for (rowNum in 1:dim(dataCombos)[1]) {
             subtitle = paste0("R = ",signif(rIntroElo, digits = 3)," | p = ",signif(pIntroElo, digits = 3)))
   ggsave(paste0(figDir,"phase",sgePhase,"/",samplingDate,"/","sge2phase",sgePhase,"_",samplingDate,"_EloRank_v_IntroOrder_XYplot.png"),
          width = 6, height = 4)
+  
+
+  
   
   #add experiment date
   sge.behave.summary$experimentDate <- NA
@@ -1150,8 +1170,10 @@ for (rowNum in 1:dim(dataCombos)[1]) {
                paste0("animals = ",numAnimals),
                paste0("animals w/o DV2J = ",numAnimalsNoDV2J),
                paste0("animals in Group Centering = ",numAnimalsGC),
-               paste0("Ordinal Rank ~ Introduction Number: R = ",rIntroElo),
-               paste0("Ordinal Rank ~ Introduction Number: p = ",pIntroElo),
+               paste0("Intro Ordinal Rank ~ Elo: R = ",rIntroElo),
+               paste0("Intro Ordinal Rank ~ Elo: p = ",pIntroElo),
+               paste0("Final Rank ~ Elo: R = ",rFinalElo),
+               paste0("Final Rank ~ Elo: p = ",pFinalElo),
                paste0("Mean Group Stability = ",meanStab),
                paste0("StDev Group Stability = ",sdStab),
                paste0("Mean Group Directional Consistency = ",meanDCI),

@@ -4,8 +4,10 @@ Observation Hours: 58
 animals = 49
 animals w/o DV2J = 48
 animals in Group Centering = 48
-Ordinal Rank ~ Introduction Number: R = -0.5216066445377
-Ordinal Rank ~ Introduction Number: p = 0.000121364515126751
+Intro Ordinal Rank ~ Elo: R = -0.931141108780007
+Intro Ordinal Rank ~ Elo: p = 3.17618784351913e-22
+Final Rank ~ Elo: R = -0.931175805134495
+Final Rank ~ Elo: p = 3.14000469193539e-22
 Mean Group Stability = 0.99032
 StDev Group Stability = 0.0101618895880638
 Mean Group Directional Consistency = 0.965565060884684
