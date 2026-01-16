@@ -313,6 +313,10 @@ eloID - Individual two-letter ID
 calcElo - Elo calculated from specified subset of data (pre-sample collection)
 groupEloStab - group stability of calcElo (via eloRating)
 groupEloDCI - group directional consistency (via eloRating)
+hIndex - heirarchy index, landau linearity (via eloRating)
+hIndexP - h index P (via eloRating)
+ttri - traingle transitivity (via eloRating)
+ttriP - ttri P (via eloRating)
 elo.groom - Elo from intro_all
 min - minutes of grooming total
 min.give - minutes of grooming given
@@ -689,7 +693,11 @@ for (rowNum in 1:dim(dataCombos)[1]) {
   intro_sub$calcEloStart <- 0
   intro_sub$groupEloStab <- 0
   intro_sub$groupEloDCI <- 0
-  
+  intro_sub$hIndex <- 0
+  intro_sub$hIndexP <- 0
+  intro_sub$ttri <- 0
+  intro_sub$ttriP <- 0
+    
   ### Repeat For Each Group
   groupIDs <- names(dominance)
   g <- groupIDs[2]
@@ -721,6 +729,7 @@ for (rowNum in 1:dim(dataCombos)[1]) {
                         dplyr::filter(Winner != "oo") |>
                         dplyr::filter(Winner != "H%")
       elo <- elo.seq(groupDomElo$Winner,groupDomElo$Loser,groupDomElo$Date)
+      eloMat <- creatematrix(winners = groupDomElo$Winner, losers = groupDomElo$Loser)
       eloVals <- extract_elo(elo)
       names(eloVals) <- toupper(names(eloVals))
       
@@ -747,12 +756,26 @@ for (rowNum in 1:dim(dataCombos)[1]) {
       
       
       groupStab <- stab_elo(elo)
+      hIndexOut <- h.index(interactionmatrix = eloMat, loops = 1000)
+      hind <- hIndexOut$value[hIndexOut$variable == "h' index"]
+      hindP <- hIndexOut$value[hIndexOut$variable == "p right"]
+      
+      transOut <- transitivity(eloMat, runs = 2000)
+      ttri <- as.numeric(transOut[2])
+      ttriP <- as.numeric(transOut[3])
+      
       
       dciMat <- creatematrix(eloobject = elo,daterange = NULL,drawmethod = "omit",onlyinteracting = FALSE,draw = NULL)
       groupDCI <- DCindex(dciMat)
       
       intro_sub$groupEloStab[which(intro_sub$group == g)] <- groupStab
       intro_sub$groupEloDCI[which(intro_sub$group == g)] <- groupDCI
+      
+      intro_sub$hIndex[which(intro_sub$group == g)] <- hind
+      intro_sub$hIndexP[which(intro_sub$group == g)] <- hindP
+      
+      intro_sub$ttri[which(intro_sub$group == g)] <- ttri
+      intro_sub$ttriP[which(intro_sub$group == g)] <- ttriP
       
       for (i in names(eloVals)) {
         eloNum <- which(names(eloVals) == i)
@@ -1048,11 +1071,21 @@ for (rowNum in 1:dim(dataCombos)[1]) {
   # number of animals (in group centering)
   numAnimalsGC <- length(unique(sge.behave.summary.full$animalID))
   
-  stabDF <- unique(sge.behave.summary.full[,colnames(sge.behave.summary.full) %in% c("groupEloStab","group.agg")])
+  stabDF <- unique(sge.behave.summary.full[,colnames(sge.behave.summary.full) %in% c("groupEloStab",
+                                                                                     "hIndex",
+                                                                                     "hIndexP",
+                                                                                     "ttri",
+                                                                                     "ttriP",
+                                                                                     "group.agg")])
   # average Stability
   meanStab <- mean(stabDF$groupEloStab)
   # stdev stability
   sdStab <- sd(stabDF$groupEloStab)
+  # average Stability
+  meanHIndex <- mean(stabDF$hIndex)
+  # average Stability
+  meanTTRI <- mean(stabDF$ttri)
+  
   
   dciDF <- unique(sge.behave.summary.full[,colnames(sge.behave.summary.full) %in% c("groupEloDCI","group.agg")])
   # average directional consistency
@@ -1178,6 +1211,10 @@ for (rowNum in 1:dim(dataCombos)[1]) {
                paste0("StDev Group Stability = ",sdStab),
                paste0("Mean Group Directional Consistency = ",meanDCI),
                paste0("StDev Group Directional Consistency = ",sdDCI),
+               paste0("Mean h index = ",meanHIndex),
+               paste0("Mean h index P = ",meanHIndex),
+               paste0("Mean ttri = ",meanTTRI),
+               paste0("Mean ttri P = ",meanTTRI),
                paste0("Starting Elo ~ Ending Elo: R = ",elo_start_stop_R),
                paste0("Starting Elo ~ Ending Elo: p = ",elo_start_stop_p),
                paste0("Average Time Grooming 'Down' (dropping 1's and 5's) = ",mean(groom_by_up_down$down, na.rm = T)),
@@ -1536,5 +1573,11 @@ subset 2nd, 3rd and 4th rank females; calculate mean rate of grooming higher-ran
 ```
 
 
+Jan 2026 Updates
+```{r}
+#Elo Stab Rating
+
+
+```
 
 

@@ -12,6 +12,11 @@ Mean Group Stability = 0.99717
 StDev Group Stability = 0.00226325723976162
 Mean Group Directional Consistency = 0.966584992045528
 StDev Group Directional Consistency = 0.0505614974800427
+Mean h index = 0.94536
+StDev h index = 0.139211136208439
+h index p range from 0.109 to 0.275 and 0 are <0.05
+Mean ttri = 1
+StDev ttri = 0
 Starting Elo ~ Ending Elo: R = 0.883806512740408
 Starting Elo ~ Ending Elo: p = 4.07284845697389e-17
 Average Time Grooming 'Down' (dropping 1's and 5's) = 65.1498620689655
