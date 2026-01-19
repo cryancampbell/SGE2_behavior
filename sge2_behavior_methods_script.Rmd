@@ -15,6 +15,7 @@ library(grid)
 library(EloRating)
 library(dplyr)
 library(lme4)
+library(glmmTMB)
 
 workDir <- getwd()
 dataDir <- paste0(workDir,"/data/")
@@ -844,8 +845,6 @@ for (rowNum in 1:dim(dataCombos)[1]) {
          width = 6, height = 4)
   
 
-  
-  
   #add experiment date
   sge.behave.summary$experimentDate <- NA
   #date the group was sampled
@@ -976,7 +975,8 @@ for (rowNum in 1:dim(dataCombos)[1]) {
     }
   }
   
-  ## cut down columns to minimum metadata (just raw behaviors, group centered behaviors, and animal/group ID)
+  ## cut down columns to minimum metadata
+  #(just raw behaviors, group centered behaviors, and animal/group ID)
   sge.behave.summary.full <- sge.behave.summary
   sge.behave.summary <- sge.behave.summary[,colnames(sge.behave.summary) %in% c("ID",
                                                                                 "phase.agg",
@@ -1083,9 +1083,15 @@ for (rowNum in 1:dim(dataCombos)[1]) {
   sdStab <- sd(stabDF$groupEloStab)
   # average Stability
   meanHIndex <- mean(stabDF$hIndex)
+  sdHIndex <- sd(stabDF$hIndex)
   # average Stability
   meanTTRI <- mean(stabDF$ttri)
+  sdTTRI <- sd(stabDF$ttri)
   
+  #is h.index significant?
+  upperP <- range(unique(sge.behave.summary.full$hIndexP))[2]
+  lowerP <- range(unique(sge.behave.summary.full$hIndexP))[1]
+  nSigP <- sum(unique(sge.behave.summary.full$hIndexP < .05))
   
   dciDF <- unique(sge.behave.summary.full[,colnames(sge.behave.summary.full) %in% c("groupEloDCI","group.agg")])
   # average directional consistency
@@ -1177,8 +1183,178 @@ for (rowNum in 1:dim(dataCombos)[1]) {
   z_rank_disp_proptime <- coef_summary2[2,3]
   p_rank_disp_proptime <- coef_summary2[2,4] 
   
+  #### Jan 2026 updated groom direction linear model code
+  directed <- groom.tot %>%
+  transmute(
+    group,
+    actor     = ID1,
+    recipient = ID2,
+    groom_min = ID1.groom.min,
+    ID1.rank,
+    ID2.rank
+  ) %>%
+  mutate(
+    elo_actor     = ID1.rank,
+    elo_recipient = ID2.rank,
+    rank_diff     = elo_recipient - elo_actor,      # >0 means grooming UP (recipient higher status)
+    abs_rank_diff = abs(rank_diff)
+  )
   
-    
+  #Fix the “IDs repeat across dyads” problem
+  #You want crossed random intercepts for actor and recipient.
+  #Because animals don’t interact across groups, it’s safest to define “ID-within-group”:
+  directed <- directed %>%
+  mutate(
+    actor_g     = interaction(group, actor, drop = TRUE),
+    recipient_g = interaction(group, recipient, drop = TRUE)
+  )
+   
+  #dyad random effect 
+  directed <- directed %>%
+  mutate(
+    dyad_g = interaction(group, pmin(actor, recipient), pmax(actor, recipient), drop = TRUE)
+  )
+  
+  #scale Elo (usually a good idea)
+  directed <- directed %>%
+  mutate(
+    rank_diff_z     = as.numeric(scale(rank_diff)),
+    abs_rank_diff_z = as.numeric(scale(abs_rank_diff))
+  )
+  
+  ## Tweedie
+  m_dir <- glmmTMB(
+    groom_min ~ abs_rank_diff_z + rank_diff_z +
+      (1 | actor_g) + (1 | recipient_g),
+    data = directed,
+    family = tweedie(link = "log")
+  )
+  
+  summary(m_dir)
+  
+  ## with random effects
+  m_dir2 <- glmmTMB(
+    groom_min ~ abs_rank_diff_z + rank_diff_z +
+      (1 | actor_g) + (1 | recipient_g) + (1 | dyad_g),
+    data = directed,
+    family = tweedie(link = "log")
+  )
+  summary(m_dir2)
+
+  
+  #negative binomial
+  directed <- directed %>%
+  mutate(groom_sec = as.integer(round(groom_min * 60)))
+
+  m_nb <- glmmTMB(
+    groom_sec ~ abs_rank_diff_z + rank_diff_z +
+      (1 | actor_g) + (1 | recipient_g),
+    data = directed,
+    family = nbinom2(link = "log")
+  )
+  summary(m_nb)
+  
+  ### generate grooming paragraph
+  make_groom_paragraph <- function(directed, m_dir2, phase_label = NULL) {
+  # ---- helpers for formatting ----
+  fmt_num <- function(x, digits = 3) formatC(x, format = "f", digits = digits)
+  fmt_z   <- function(x) formatC(x, format = "f", digits = 2)
+
+  fmt_p <- function(p) {
+    if (is.na(p)) return("NA")
+    if (p < 1e-3) {
+      # scientific for very small p
+      formatC(p, format = "e", digits = 2)
+    } else {
+      # keep 4 decimals for typical p-values like 0.0205
+      formatC(p, format = "f", digits = 4)
+    }
+  }
+
+  fmt_rr <- function(x) formatC(x, format = "f", digits = 2)
+  fmt_ci <- function(lo, hi) paste0(fmt_rr(lo), "–", fmt_rr(hi))
+
+  pct_change_phrase <- function(beta) {
+    pct <- 100 * (exp(beta) - 1)
+    if (is.na(pct)) return("")
+    if (pct < 0) paste0("~", abs(round(pct)), "% less")
+    else         paste0("~", round(pct), "% more")
+  }
+
+  # ---- sample sizes from directed ----
+  n_directed <- nrow(directed)
+  n_groups   <- length(unique(directed$group))
+  n_ind      <- length(unique(c(as.character(directed$actor), as.character(directed$recipient))))
+
+  # Prefer dyad_g if present; it's more robust than nrow/2
+  if ("dyad_g" %in% names(directed)) {
+    n_dyads <- length(unique(as.character(directed$dyad_g)))
+  } else {
+    n_dyads <- n_directed / 2
+  }
+
+  # ---- model info + coefficients ----
+  fam  <- family(m_dir2)$family
+  link <- family(m_dir2)$link
+  fam_pretty <- tools::toTitleCase(fam)
+
+  coefs <- summary(m_dir2)$coefficients$cond
+
+  get_term <- function(term) {
+    if (!term %in% rownames(coefs)) {
+      stop("Term '", term, "' not found in model coefficients. Available terms: ",
+           paste(rownames(coefs), collapse = ", "))
+    }
+    beta <- coefs[term, "Estimate"]
+    se   <- coefs[term, "Std. Error"]
+    z    <- coefs[term, "z value"]
+    p    <- coefs[term, "Pr(>|z|)"]
+    ci   <- beta + c(-1, 1) * 1.96 * se
+    list(beta = beta, se = se, z = z, p = p, ci = ci,
+         rr = exp(beta), rr_ci = exp(ci))
+  }
+
+  abs_res <- get_term("abs_rank_diff_z")
+  dir_res <- get_term("rank_diff_z")
+
+  # ---- optional phase label ----
+  phase_txt <- if (!is.null(phase_label) && nzchar(phase_label)) {
+    paste0(phase_label, ": ")
+  } else {
+    ""
+  }
+
+  # ---- build paragraph ----
+  para <- paste0(
+    phase_txt,
+    "To test whether grooming was concentrated among similarly ranked partners and biased up the dominance hierarchy, ",
+    "we analyzed directed dyads (actor \u2192 recipient) using a ", fam_pretty,
+    " generalized linear mixed model (", link, " link) predicting total grooming duration (min) from ",
+    "absolute rank distance (|Elo_recipient \u2212 Elo_actor|; z-scored) and directional rank difference ",
+    "(Elo_recipient \u2212 Elo_actor; z-scored; positive values indicate grooming directed toward higher-status recipients). ",
+    "We included random intercepts for actor identity, recipient identity, and dyad (N = ", n_directed,
+    " directed dyads across ", n_groups, " groups; ", n_ind, " individuals; ", n_dyads, " dyads). ",
+    "Grooming duration decreased with increasing rank distance (",
+    "\u03B2 = ", fmt_num(abs_res$beta), " \u00B1 ", fmt_num(abs_res$se), " SE, z = ", fmt_z(abs_res$z),
+    ", p = ", fmt_p(abs_res$p), "), corresponding to ", pct_change_phrase(abs_res$beta),
+    " expected grooming per 1 SD increase in rank distance (exp(\u03B2) = ", fmt_rr(abs_res$rr),
+    ", 95% CI ", fmt_ci(abs_res$rr_ci[1], abs_res$rr_ci[2]), "). ",
+    "Controlling for rank distance, grooming was biased up the hierarchy (",
+    "\u03B2 = ", fmt_num(dir_res$beta), " \u00B1 ", fmt_num(dir_res$se), " SE, z = ", fmt_z(dir_res$z),
+    ", p = ", fmt_p(dir_res$p), "), corresponding to ", pct_change_phrase(dir_res$beta),
+    " expected grooming per 1 SD increase in recipient-minus-actor Elo (exp(\u03B2) = ", fmt_rr(dir_res$rr),
+    ", 95% CI ", fmt_ci(dir_res$rr_ci[1], dir_res$rr_ci[2]), ")."
+  )
+
+  return(para)
+  }
+
+  # Example usage:
+  groom_paragraph <- make_groom_paragraph(directed, m_dir2, phase_label = "Phase 1")
+  cat(groom_paragraph)
+
+  
+  
   #generate output
   ## text files
   write.table(x = sge.behave.summary.full,
@@ -1212,21 +1388,18 @@ for (rowNum in 1:dim(dataCombos)[1]) {
                paste0("Mean Group Directional Consistency = ",meanDCI),
                paste0("StDev Group Directional Consistency = ",sdDCI),
                paste0("Mean h index = ",meanHIndex),
-               paste0("Mean h index P = ",meanHIndex),
+               paste0("StDev h index = ",sdHIndex),
+               paste0("h index p range from ",lowerP,
+                      " to ",upperP," and ",nSigP," are <0.05"),
                paste0("Mean ttri = ",meanTTRI),
-               paste0("Mean ttri P = ",meanTTRI),
+               paste0("StDev ttri = ",sdTTRI),
                paste0("Starting Elo ~ Ending Elo: R = ",elo_start_stop_R),
                paste0("Starting Elo ~ Ending Elo: p = ",elo_start_stop_p),
                paste0("Average Time Grooming 'Down' (dropping 1's and 5's) = ",mean(groom_by_up_down$down, na.rm = T)),
                paste0("Average Time Grooming 'Up' (dropping 1's and 5's) = ",mean(groom_by_up_down$up, na.rm = T)),
                paste0("Paired Grooming T-Test (Up - Down, positive means more grooming 'Up'): t = ",groom_ttest$statistic),
-               paste0("Paired Grooming T-Test: p = ",groom_ttest$p.value),
-               paste0("we tested if females who were adjacent in rank were more likely to groom together. for a binary pattern (groomed at all versus never groomed:",
-                      "βrank_disparity = ",beta_rank_disp,
-                      ",  Z = ",z_rank_disp,",  N = ",nrow(groom.tot)," dyads,",
-                      "P = ",p_rank_disp,"), or the proportion of total grooming time that a female invested in a grooming partner, pGroom total,",
-                      "in those dyads that groomed at least once (βrank_disparity = ",beta_rank_disp_proptime,", N = ",nrow(df_groomed)," dyads,",
-                      "P = ",p_rank_disp_proptime)),
+               paste0("Paired Grooming T-Test: p = ",groom_ttest$p.value,""),
+               paste0(groom_paragraph)),
              con = methodsOut)
   close(methodsOut)
 }

@@ -14,7 +14,7 @@ Mean Group Directional Consistency = 0.966584992045528
 StDev Group Directional Consistency = 0.0505614974800427
 Mean h index = 0.94536
 StDev h index = 0.139211136208439
-h index p range from 0.109 to 0.275 and 0 are <0.05
+h index p range from 0.1 to 0.294 and 0 are <0.05
 Mean ttri = 1
 StDev ttri = 0
 Starting Elo ~ Ending Elo: R = 0.883806512740408
@@ -23,4 +23,4 @@ Average Time Grooming 'Down' (dropping 1's and 5's) = 65.1498620689655
 Average Time Grooming 'Up' (dropping 1's and 5's) = 108.9331
 Paired Grooming T-Test (Up - Down, positive means more grooming 'Up'): t = 2.39327467366616
 Paired Grooming T-Test: p = 0.0236448051682743
-we tested if females who were adjacent in rank were more likely to groom together. for a binary pattern (groomed at all versus never groomed:βrank_disparity = -1.4904402956432,  Z = -4.67829401067931,  N = 192 dyads,P = 2.89271570617031e-06), or the proportion of total grooming time that a female invested in a grooming partner, pGroom total,in those dyads that groomed at least once (βrank_disparity = -0.0365956381037249, N = 168 dyads,P = 0.122675675101067
+Phase 1: To test whether grooming was concentrated among similarly ranked partners and biased up the dominance hierarchy, we analyzed directed dyads (actor → recipient) using a Tweedie generalized linear mixed model (log link) predicting total grooming duration (min) from absolute rank distance (|Elo_recipient − Elo_actor|; z-scored) and directional rank difference (Elo_recipient − Elo_actor; z-scored; positive values indicate grooming directed toward higher-status recipients). We included random intercepts for actor identity, recipient identity, and dyad (N = 192 directed dyads across 10 groups; 49 individuals; 96 dyads). Grooming duration decreased with increasing rank distance (β = -0.737 ± 0.158 SE, z = -4.67, p = 2.96e-06), corresponding to ~52% less expected grooming per 1 SD increase in rank distance (exp(β) = 0.48, 95% CI 0.35–0.65). Controlling for rank distance, grooming was biased up the hierarchy (β = 0.283 ± 0.119 SE, z = 2.37, p = 0.0176), corresponding to ~33% more expected grooming per 1 SD increase in recipient-minus-actor Elo (exp(β) = 1.33, 95% CI 1.05–1.68).

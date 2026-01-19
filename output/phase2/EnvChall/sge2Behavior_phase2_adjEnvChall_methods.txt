@@ -14,7 +14,7 @@ Mean Group Directional Consistency = 0.993853281307523
 StDev Group Directional Consistency = 0.00895767291406575
 Mean h index = 0.96
 StDev h index = 0.0936897954837013
-h index p range from 0.107 to 0.75 and 0 are <0.05
+h index p range from 0.102 to 0.769 and 0 are <0.05
 Mean ttri = 1
 StDev ttri = 0
 Starting Elo ~ Ending Elo: R = 0.90766007935207
@@ -23,4 +23,4 @@ Average Time Grooming 'Down' (dropping 1's and 5's) = 21.5066923076923
 Average Time Grooming 'Up' (dropping 1's and 5's) = 31.5606896551724
 Paired Grooming T-Test (Up - Down, positive means more grooming 'Up'): t = 1.79518027539857
 Paired Grooming T-Test: p = 0.0847249004972398
-we tested if females who were adjacent in rank were more likely to groom together. for a binary pattern (groomed at all versus never groomed:βrank_disparity = -1.1022915428262,  Z = -4.82538254246681,  N = 170 dyads,P = 1.39734797708882e-06), or the proportion of total grooming time that a female invested in a grooming partner, pGroom total,in those dyads that groomed at least once (βrank_disparity = -0.0533217086964229, N = 128 dyads,P = 0.109148376494198
+Phase 1: To test whether grooming was concentrated among similarly ranked partners and biased up the dominance hierarchy, we analyzed directed dyads (actor → recipient) using a Tweedie generalized linear mixed model (log link) predicting total grooming duration (min) from absolute rank distance (|Elo_recipient − Elo_actor|; z-scored) and directional rank difference (Elo_recipient − Elo_actor; z-scored; positive values indicate grooming directed toward higher-status recipients). We included random intercepts for actor identity, recipient identity, and dyad (N = 170 directed dyads across 10 groups; 46 individuals; 85 dyads). Grooming duration decreased with increasing rank distance (β = -0.729 ± 0.179 SE, z = -4.07, p = 4.72e-05), corresponding to ~52% less expected grooming per 1 SD increase in rank distance (exp(β) = 0.48, 95% CI 0.34–0.69). Controlling for rank distance, grooming was biased up the hierarchy (β = 0.372 ± 0.121 SE, z = 3.07, p = 0.0021), corresponding to ~45% more expected grooming per 1 SD increase in recipient-minus-actor Elo (exp(β) = 1.45, 95% CI 1.14–1.84).
