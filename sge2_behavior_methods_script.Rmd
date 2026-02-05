@@ -821,15 +821,15 @@ for (rowNum in 1:dim(dataCombos)[1]) {
                           mutate(finalRank = rank(-calcElo, ties.method = "min")) %>%
                           ungroup()
   
-  # R of order of intro ~ order of Elo
+  # R of final order ~ Elo  
   rFinalElo <- cor.test(sge.behave.summary$calcElo, sge.behave.summary$finalRank)$estimate
-  # p of order of intro ~ order of Elo
+  # p of final order ~ Elo
   pFinalElo <- cor.test(sge.behave.summary$calcElo, sge.behave.summary$finalRank)$p.value
 
-  # R of final order ~ Elo
-  rIntroElo <- cor.test(sge.behave.summary$calcElo, sge.behave.summary$ordinal.rank)$estimate
-  # p of final order ~ Elo
-  pIntroElo <- cor.test(sge.behave.summary$calcElo, sge.behave.summary$ordinal.rank)$p.value
+  # R of order of intro ~ order of Elo
+  rIntroElo <- cor.test(sge.behave.summary$calcElo, sge.behave.summary$intro.no)$estimate
+  # p of order of intro ~ order of Elo
+  pIntroElo <- cor.test(sge.behave.summary$calcElo, sge.behave.summary$intro.no)$p.value
 
     
   ggplot(data = sge.behave.summary,
